@@ -287,7 +287,19 @@ export default function AssessmentQuiz() {
         body: JSON.stringify(payload)
       });
       
-      const data = await response.json();
+      const responseText = await response.text();
+      let data: any;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("Server response text parse error:", responseText);
+        throw new Error(
+          responseText.includes("<!DOCTYPE html>") || responseText.includes("<html>")
+            ? "Server mengembalikan halaman HTML (Error 404/500). Silakan coba kirim ulang atau hubungi langsung melalui WhatsApp."
+            : `Format respon server tidak valid: ${responseText.slice(0, 100)}...`
+        );
+      }
+
       if (response.ok && data.success) {
         setResultsData(data.data);
         setQuizCompleted(true);
@@ -304,7 +316,7 @@ export default function AssessmentQuiz() {
           window.dispatchEvent(new CustomEvent("kunyah-assessment-submitted"));
         }
       } else {
-        throw new Error(data.error || "Gagal mengirim jawaban. Coba ulangi.");
+        throw new Error(data?.error || "Gagal mengirim jawaban. Coba ulangi.");
       }
     } catch (err: any) {
       setError(err?.message || "Koneksi terganggu. Silakan tekan tombol kirim kembali.");

@@ -21,9 +21,9 @@ export default function Header() {
 
   const menuItems = [
     { label: "Home", href: "#top" },
-    { label: "Assessment", href: "#assessment" },
     { label: "Tentang Kunyah", href: "#tentang-kunyah" },
     { label: "Cara Kerja", href: "#cara-kerja" },
+    { label: "Assessment", href: "#assessment" },
     { label: "Kontak", href: "#kontak" }
   ];
 
@@ -31,7 +31,7 @@ export default function Header() {
     <header 
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled 
-          ? "bg-white/95 backdrop-blur-md shadow-md py-4 border-b border-[#F5F3EC]" 
+          ? "bg-white/70 backdrop-blur-md shadow-md py-4 border-b border-[#F5F3EC]" 
           : "bg-transparent py-5"
       }`}
     >

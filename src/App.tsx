@@ -190,8 +190,37 @@ export default function App() {
         </section>
 
         {/* EMPATHY SECTION */}
-        <section className="py-20 md:py-24 bg-white" id="tentang-kunyah">
+        <section className="py-20 md:py-28 bg-white border-b border-[#F5F3EC]" id="tentang-kunyah">
           <div className="w-full max-w-7xl mx-auto px-4 md:px-8">
+            
+            {/* BRAND BIOGRAPHY PROFILE (INTRO) */}
+            <div className="bg-[#F8F7F2] border border-[#F5F3EC] rounded-3xl p-6 md:p-10 mb-20 relative overflow-hidden shadow-sm">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-400/5 rounded-full blur-3xl pointer-events-none" />
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 items-center">
+                <div className="md:col-span-4 flex flex-col items-center text-center space-y-3.5">
+                  <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center border-2 border-yellow-100 shadow-md">
+                    <svg viewBox="0 0 100 100" className="w-11 h-11 text-[#E8B100]">
+                      <path d="M50 18c6 0 11 5 11 11s-5 11-11 11-11-5-11-11 5-11 11-11z" fill="#E8B100" />
+                      <path d="M50 67c-18 0-30 8-30 18v2h60v-2c0-10-12-18-30-18z" fill="#222222" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-heading text-base font-black text-[#1E1E1E]">drg. Muhammad Syafaat</h4>
+                    <p className="text-[10px] text-yellow-800 font-bold uppercase tracking-wider mt-0.5">Founder Kunyahlicious</p>
+                  </div>
+                </div>
+                
+                <div className="md:col-span-8 space-y-3">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-0.5 bg-yellow-100/95 text-yellow-900 text-xs font-extrabold tracking-wider rounded-full uppercase">
+                    Edukasi & Pendampingan Sehat
+                  </span>
+                  <p className="text-sm md:text-base text-gray-700 leading-relaxed font-normal">
+                    <span className="font-extrabold text-[#1E1E1E]">Kunyahlicious</span> adalah program edukasi dan pendampingan pola makan sehat yang diprakarsai oleh <span className="font-bold text-gray-900">drg. Muhammad Syafaat</span>. Program ini berfokus membantu pesertanya mencapai berat badan ideal tanpa diet ekstrem, tanpa kelaparan, dan tanpa pantangan makanan yang menyiksa dengan metode pendekatan memperbaiki kebiasaan dan pola mengunyah serta makan dengan metode yang lebih intuitif.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
               <span className="text-xs font-bold text-[#E8B100] tracking-wider uppercase">Your Personal Struggle</span>
               <h2 className="text-3xl md:text-4xl font-extrabold font-heading text-[#1E1E1E] tracking-tight">
@@ -202,21 +231,21 @@ export default function App() {
               </p>
             </div>
 
-            {/* Problem card grids */}
+            {/* Problem card grids - Enhanced Premium Clean Border Style */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {problemCards.map((card) => (
                 <div 
                   key={card.id}
-                  className="bg-[#F8F7F2] p-6 rounded-3xl border border-[#F5F3EC] shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+                  className="bg-[#FAFAF9] p-6 lg:p-7 rounded-3xl border border-gray-150/80 shadow-sm hover:shadow-md hover:border-yellow-250 transition-all flex flex-col justify-between group"
                 >
                   <div className="space-y-4">
-                    <span className="w-10 h-10 rounded-2xl bg-yellow-100 flex items-center justify-center text-lg font-black text-[#E8B100] font-heading">
+                    <span className="w-10 h-10 rounded-2xl bg-yellow-50 text-base font-black text-[#E8B100] font-heading flex items-center justify-center border border-yellow-100/60 group-hover:bg-[#E8B100] group-hover:text-white transition-colors">
                       {card.id}
                     </span>
-                    <h3 className="text-lg font-bold font-heading text-[#1E1E1E] leading-snug">
+                    <h3 className="text-base font-bold font-heading text-[#1E1E1E] leading-snug">
                       {card.title}
                     </h3>
-                    <p className="text-xs md:text-sm text-gray-500 leading-relaxed">
+                    <p className="text-[12px] md:text-xs text-gray-500 leading-relaxed font-light">
                       {card.desc}
                     </p>
                   </div>
@@ -225,7 +254,7 @@ export default function App() {
             </div>
 
             <div className="text-center mt-12 max-w-xl mx-auto">
-              <p className="text-sm md:text-base text-gray-600 font-medium leading-relaxed">
+              <p className="text-sm text-gray-600 font-medium leading-relaxed">
                 📢 <span className="text-[#E8B100] font-bold">Banyak orang bukan kurang niat</span> — tapi hanya belum memahami dengan tepat bagaimana pola hidup unik mereka sendiri berinteraksi.
               </p>
             </div>
@@ -351,8 +380,11 @@ export default function App() {
         </section>
 
         {/* ASSESSMENT WIDGET COMPONENT (MOST IMPORTANT FOR AD CONVERSION) */}
-        <section className="py-20 md:py-28 bg-white" id="assessment">
-          <AssessmentQuiz />
+        <section className="py-20 md:py-28 bg-[#FDFBF7] border-y border-yellow-100 relative" id="assessment">
+          <div className="absolute inset-0 bg-radial from-yellow-500/[0.03] via-transparent to-transparent pointer-events-none" />
+          <div className="relative z-10">
+            <AssessmentQuiz />
+          </div>
         </section>
 
         {/* EXPECTATIONS SECTION */}
@@ -366,12 +398,12 @@ export default function App() {
               Apa yang terjadi setelah assessment dikirim?
             </h2>
 
-            <p className="text-sm md:text-base text-gray-600 leading-relaxed max-w-2xl mx-auto font-light">
-              Tim Coach Kunyah akan mempelajari seluruh jawaban profil kesehatanmu secara seksama. Kami kemudian akan langsung menghubungi kamu secara santai melalui WhatsApp untuk membagikan <span className="font-semibold text-gray-800">insight awal terpersonalisasi</span> yang relevan dengan kondisi dan kendala pola hidupmu saat ini.
+            <p className="text-sm md:text-base text-gray-750 leading-relaxed max-w-2xl mx-auto font-medium">
+              Setelah seluruh pertanyaan selesai dijawab, hasil penilaian profil kesehatan awal Anda akan langsung tampil di kolom di atas. Kami harap Anda <span className="font-semibold text-gray-900">membaca hasil analisis tersebut secara langsung</span>, lalu <span className="font-bold text-[#E8B100]">mengeklik tombol submit untuk terhubung otomatis dengan Admin Kunyah di WhatsApp</span> untuk mendalami detail rekomendasi solusi terbaik bagi Anda.
             </p>
 
             <p className="text-xs text-gray-400 font-medium">
-              Tenang saja, tidak ada paksaan berlangganan ataupun spam telepon penjualan yang mengganggu ketenangan Anda.
+              Tenang saja, langkah ini 100% gratis, nyaman, dan kerahasiaan data harian Anda sepenuhnya terjamin aman.
             </p>
           </div>
         </section>
