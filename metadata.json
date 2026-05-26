@@ -1,0 +1,6 @@
+{
+  "name": "Kunyah - Healthy Lifestyle Assessment",
+  "description": "Interactive healthy lifestyle and weight loss diagnostic assessment landing page for Kunyah.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
