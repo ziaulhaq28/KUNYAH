@@ -122,7 +122,7 @@ export default function Logo({ className = "", size = 36 }: LogoProps) {
                   className="relative max-w-[90vw] max-h-[85vh] flex flex-col items-center justify-center gap-6 cursor-zoom-out"
                 >
                   {/* Massive rendering of the logo (attempts Image, falls back to SVG) */}
-                  <div className="w-[280px] h-[280px] sm:w-[380px] sm:h-[380px] bg-white rounded-full p-6 shadow-2xl flex items-center justify-center relative overflow-hidden group select-none">
+                  <div className="w-[280px] h-[280px] sm:w-[380px] sm:h-[380px] bg-white rounded-full p-[1px] shadow-2xl flex items-center justify-center relative overflow-hidden group select-none">
                     {renderLogo("100%")}
                   </div>
 

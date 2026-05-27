@@ -12,7 +12,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8 pb-12">
           
           {/* Logo & Vision Block */}
-          <div className="md:col-span-5 space-y-4">
+          <div className="md:col-span-8 space-y-4">
             <div className="flex items-center gap-2.5">
               <Logo size={36} />
               <div className="flex flex-col">
@@ -25,15 +25,15 @@ export default function Footer() {
               </div>
             </div>
             
-            <p className="text-sm text-gray-500 leading-relaxed max-w-sm">
+            <p className="text-sm text-gray-500 leading-relaxed max-w-xl">
               Membantu masyarakat Indonesia mencapai berat badan ideal melalui analisis kebiasaan harian dan pola hidup realistis yang berkelanjutan. Tanpa diet ekstrem, penuh kepedulian.
             </p>
           </div>
 
           {/* Quick Links Column */}
-          <div className="md:col-span-3 space-y-4">
+          <div className="md:col-span-4 space-y-4">
             <h4 className="font-heading text-sm font-bold text-gray-800 tracking-wider uppercase flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-[#E8B100]" /> Program Kunyah
+              <HelpCircle className="w-4 h-4 text-[#E8B100]" /> Program <strong className="font-bold">Kunyah</strong>
             </h4>
             <ul className="space-y-2 text-sm text-gray-500">
               <li>
@@ -48,40 +48,6 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Contact Column */}
-          <div className="md:col-span-4 space-y-4">
-            <h4 className="font-heading text-sm font-bold text-gray-800 tracking-wider uppercase">
-              Hubungi Kami
-            </h4>
-            
-            {/* Social handles with mock placeholders */}
-            <div className="space-y-3">
-              <a 
-                href="https://wa.me/628212345678" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="flex items-center gap-2.5 text-sm text-gray-600 hover:text-[#E8B100] transition-colors font-medium"
-              >
-                <div className="w-8 h-8 rounded-full bg-yellow-50 flex items-center justify-center border border-yellow-100">
-                  <MessageSquare className="w-4 h-4 text-[#E8B100]" />
-                </div>
-                <span>WhatsApp: +62 821-2345-678</span>
-              </a>
-
-              <a 
-                href="https://instagram.com/kunyah.id" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="flex items-center gap-2.5 text-sm text-gray-600 hover:text-[#E8B100] transition-colors font-medium"
-              >
-                <div className="w-8 h-8 rounded-full bg-yellow-50 flex items-center justify-center border border-yellow-100">
-                  <Instagram className="w-4 h-4 text-[#E8B100]" />
-                </div>
-                <span>Instagram: @kunyah.id</span>
-              </a>
-            </div>
-          </div>
-
         </div>
 
         {/* Brand Divider with Soft Kunyah Yellow line */}
@@ -89,7 +55,7 @@ export default function Footer() {
 
         {/* Lower Banner Copyright */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-gray-400 font-medium">
-          <p>© {currentYear} Kunyah Indonesia. Hak Cipta Dilindungi.</p>
+          <p>© {currentYear} <strong className="font-bold">Kunyah</strong> Indonesia. Hak Cipta Dilindungi.</p>
           <p className="flex items-center gap-1">
             Dibuat dengan <Heart className="w-3.5 h-3.5 text-red-400 fill-current" /> untuk perubahan pola hidup sehat Indonesia.
           </p>

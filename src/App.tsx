@@ -81,110 +81,85 @@ export default function App() {
     },
     {
       num: "02",
-      title: "Analisis Profil",
-      desc: "Tim Coach Kunyah mempelajari kecenderungan pola hidupmu secara holistik untuk mengidentifikasi hambatan utamanya."
+      title: "Hasil Instan",
+      desc: "Begitu seluruh pertanyaan selesai dijawab, hasil analisis & penilaian awal profil kesehatan harian Anda akan langsung tampil di layar."
     },
     {
       num: "03",
-      title: "Dapatkan Insight",
-      desc: "Terima umpan balik personal dan actionable strategis langsung via obrolan WhatsApp tanpa drama penjualan yang agresif."
+      title: "Diskusi Bebas",
+      desc: "Gunakan hasil analisis Anda untuk berdiskusi langsung dan berkonsultasi secara santai bersama Coach melalui WhatsApp tanpa paksaan."
     }
   ];
 
   const faqs = [
     {
       q: "Apakah assessment ini berbayar?",
-      a: "100% Gratis. Misi Kunyah adalah memetakan hambatan kesehatan utama masyarakat urban Indonesia sebelum menyarankan solusi jangka panjang."
+      a: (
+        <>
+          100% Gratis. Misi <strong className="font-bold">Kunyah</strong> adalah memetakan hambatan kesehatan utama sebelum menyarankan solusi atau perubahan pola hidup terbaik.
+        </>
+      )
     },
     {
       q: "Berapa lama saya akan mendapatkan hasil analisis?",
-      a: "Dokumen insight personal biasanya dipelajari dan dikirimkan oleh tim Coach Kunyah dalam waktu 15-30 menit setelah pengiriman di jam kerja harian."
+      a: (
+        <>
+          Hasil diagnosis awal langsung tersaji secara instan di layar begitu Anda menekan tombol kirim. Anda dapat melanjutkannya dengan diskusi interaktif bersama Coach <strong className="font-bold">Kunyah</strong> kapan saja.
+        </>
+      )
     },
     {
       q: "Apakah data WhatsApp saya akan aman?",
-      a: "Sangat aman. Kami menjamin kerahasiaan data privasi Anda. Kami tidak pernah membagikan atau menjual nomor Anda ke platform pihak ketiga mana pun."
+      a: (
+        <>
+          Sangat aman. Kami menjamin kerahasiaan data privasi Anda. Kami tidak pernah membagikan atau menjual nomor Anda ke platform pihak ketiga mana pun.
+        </>
+      )
     }
   ];
 
   return (
-    <div className="min-h-screen flex flex-col justify-between selection:bg-[#E8B100]/25 Selection:text-[#1E1E1E]" id="top">
+    <div className="min-h-screen flex flex-col justify-between selection:bg-[#E8B100]/25 selection:text-[#1E1E1E]" id="top">
       {/* Premium Header Menu */}
       <Header />
 
-      <main className="pt-24 flex-1">
+      <main className="pt-14 flex-1">
         
         {/* HERO SECTION */}
-        <section className="relative overflow-hidden py-16 md:py-24 bg-[#F8F7F2]">
+        <section className="relative overflow-hidden pt-10 pb-16 md:pt-14 md:pb-20 bg-[#F8F7F2]">
           {/* Subtle Decorative Yellow Orb background */}
           <div className="absolute top-1/4 right-[-10%] w-[400px] h-[400px] rounded-full bg-[#F2B705]/5 blur-3xl pointer-events-none" />
           <div className="absolute bottom-10 left-[-5%] w-[300px] h-[300px] rounded-full bg-[#E8B100]/5 blur-3xl pointer-events-none" />
 
-          <div className="w-full max-w-7xl mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-12 gap-12 items-center relative z-10">
-            {/* Left Column Copywriting */}
-            <div className="md:col-span-7 space-y-6">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold tracking-wider rounded-full uppercase">
-                <Sparkles className="w-3" /> Realistis • Berkelanjutan • Teruji
-              </span>
-              
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold font-heading text-[#1E1E1E] leading-tight">
-                Berat Badan Sulit Turun Meski Merasa Sudah Menjaga Makan?
-              </h1>
-              
-              <p className="text-lg md:text-xl text-gray-500 leading-relaxed max-w-2xl font-light">
-                Temukan pola hidup yang mungkin menghambat progressmu melalui assessment sederhana bersama <span className="font-semibold text-gray-800">Kunyah</span>.
+          <div className="w-full max-w-4xl mx-auto px-4 md:px-8 text-center flex flex-col items-center space-y-6 relative z-10">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold tracking-wider rounded-full uppercase">
+              <Sparkles className="w-3" /> Realistis • Berkelanjutan • Teruji
+            </span>
+            
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold font-heading text-[#1E1E1E] leading-tight max-w-3xl">
+              Berat Badan Sulit Turun Meski Merasa Sudah Menjaga Makan?
+            </h1>
+            
+            <p className="text-lg md:text-xl text-gray-500 leading-relaxed max-w-2xl font-light">
+              Temukan pola hidup yang mungkin menghambat progressmu melalui assessment sederhana bersama <strong className="font-bold text-gray-800">Kunyah</strong>.
+            </p>
+
+            <div className="flex flex-col items-center">
+              <a
+                href="#assessment"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    (window as any).triggerKunyahAssessmentStart?.();
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-8 py-4 bg-[#E8B100] text-white font-extrabold rounded-2xl hover:bg-[#D5A200] transition-all duration-200 shadow-lg shadow-yellow-500/10 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+              >
+                Mulai Assessment Gratis
+                <ChevronRight className="w-5 h-5 stroke-[3px]" />
+              </a>
+              <p className="text-xs text-gray-400 mt-2.5 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" /> Hanya butuh waktu 2 menit • Gratis selamanya
               </p>
-
-              <div>
-                <a
-                  href="#assessment"
-                  onClick={() => {
-                    if (typeof window !== "undefined") {
-                      (window as any).triggerKunyahAssessmentStart?.();
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-[#E8B100] text-white font-extrabold rounded-2xl hover:bg-[#D5A200] transition-all duration-200 shadow-lg shadow-yellow-500/10 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-                >
-                  Mulai Assessment Gratis
-                  <ChevronRight className="w-5 h-5 stroke-[3px]" />
-                </a>
-                <p className="text-xs text-gray-400 mt-2.5 pl-1.5 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" /> Hanya butuh waktu 2 menit • Gratis selamanya
-                </p>
-              </div>
-            </div>
-
-            {/* Right Column Founder Trust & Lifestyle Image wrapper */}
-            <div className="md:col-span-5 flex justify-center">
-              <div className="relative w-full max-w-[380px] aspect-[4/5] bg-[#F5F3EC] rounded-[40px] p-6 shadow-2xl border border-white flex flex-col justify-between overflow-hidden">
-                {/* Floating Aesthetic Tag */}
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm shadow px-3.5 py-1.5 rounded-full flex items-center gap-1.5 text-3xs font-bold uppercase tracking-wider text-[#1E1E1E]">
-                  <span className="w-2 h-2 rounded-full bg-[#E8B100] animate-pulse" /> Community First
-                </div>
-
-                {/* Minimalist Illustration/Placeholder of Lifestyle Coach */}
-                <div className="my-auto flex flex-col items-center justify-center text-center py-6 space-y-4">
-                  <div className="w-24 h-24 rounded-full bg-white shadow-inner flex items-center justify-center border-3 border-yellow-100">
-                    {/* SVG Avatar with soft lighting representing coach drg. Muhammad Syafaat */}
-                    <svg viewBox="0 0 100 100" className="w-16 h-16 text-gray-600">
-                      <circle cx="50" cy="40" r="22" className="fill-yellow-100" />
-                      <path d="M50 18c6 0 11 5 11 11s-5 11-11 11-11-5-11-11 5-11 11-11z" fill="#E8B100" />
-                      <path d="M50 67c-18 0-30 8-30 18v2h60v-2c0-10-12-18-30-18z" fill="#222222" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-heading text-lg font-extrabold text-[#1E1E1E]">drg. Muhammad Syafaat</h3>
-                    <p className="text-3xs text-yellow-800 font-semibold uppercase tracking-wider">Healthy Productivity Coach</p>
-                    <p className="text-xs text-gray-400 mt-1">Founder Kunyah</p>
-                  </div>
-                </div>
-
-                {/* Micro Testimony Badge */}
-                <div className="bg-white/90 backdrop-blur-sm p-4 rounded-3xl border border-yellow-100 shadow-sm">
-                  <p className="text-2xs text-gray-600 leading-relaxed italic">
-                    "Kunci keberhasilan kesehatan jangka panjang terletak pada keselarasan ritme hidup sehari-hari, bukan dari penderitaan diet sekejap."
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
         </section>
@@ -193,34 +168,6 @@ export default function App() {
         <section className="py-20 md:py-28 bg-white border-b border-[#F5F3EC]" id="tentang-kunyah">
           <div className="w-full max-w-7xl mx-auto px-4 md:px-8">
             
-            {/* BRAND BIOGRAPHY PROFILE (INTRO) */}
-            <div className="bg-[#F8F7F2] border border-[#F5F3EC] rounded-3xl p-6 md:p-10 mb-20 relative overflow-hidden shadow-sm">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-400/5 rounded-full blur-3xl pointer-events-none" />
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 items-center">
-                <div className="md:col-span-4 flex flex-col items-center text-center space-y-3.5">
-                  <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center border-2 border-yellow-100 shadow-md">
-                    <svg viewBox="0 0 100 100" className="w-11 h-11 text-[#E8B100]">
-                      <path d="M50 18c6 0 11 5 11 11s-5 11-11 11-11-5-11-11 5-11 11-11z" fill="#E8B100" />
-                      <path d="M50 67c-18 0-30 8-30 18v2h60v-2c0-10-12-18-30-18z" fill="#222222" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-heading text-base font-black text-[#1E1E1E]">drg. Muhammad Syafaat</h4>
-                    <p className="text-[10px] text-yellow-800 font-bold uppercase tracking-wider mt-0.5">Founder Kunyahlicious</p>
-                  </div>
-                </div>
-                
-                <div className="md:col-span-8 space-y-3">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-0.5 bg-yellow-100/95 text-yellow-900 text-xs font-extrabold tracking-wider rounded-full uppercase">
-                    Edukasi & Pendampingan Sehat
-                  </span>
-                  <p className="text-sm md:text-base text-gray-700 leading-relaxed font-normal">
-                    <span className="font-extrabold text-[#1E1E1E]">Kunyahlicious</span> adalah program edukasi dan pendampingan pola makan sehat yang diprakarsai oleh <span className="font-bold text-gray-900">drg. Muhammad Syafaat</span>. Program ini berfokus membantu pesertanya mencapai berat badan ideal tanpa diet ekstrem, tanpa kelaparan, dan tanpa pantangan makanan yang menyiksa dengan metode pendekatan memperbaiki kebiasaan dan pola mengunyah serta makan dengan metode yang lebih intuitif.
-                  </p>
-                </div>
-              </div>
-            </div>
-
             <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
               <span className="text-xs font-bold text-[#E8B100] tracking-wider uppercase">Your Personal Struggle</span>
               <h2 className="text-3xl md:text-4xl font-extrabold font-heading text-[#1E1E1E] tracking-tight">
@@ -273,7 +220,7 @@ export default function App() {
                   Menurunkan berat badan bukan hanya soal makan lebih sedikit.
                 </h2>
                 <p className="text-base text-gray-500 leading-relaxed font-light">
-                  Metabolisme tubuh manusia adalah sistem adaptasi yang cerdas. Menghukum diri sendiri dengan kelaparan hanya merusak regulasi hormonal harianmu. Kunyah berfokus memperbaiki pilar-pilar penting ini:
+                  Metabolisme tubuh manusia adalah sistem adaptasi yang cerdas. Menghukum diri sendiri dengan kelaparan hanya merusak regulasi hormonal harianmu. <strong className="font-bold text-gray-800">Kunyah</strong> berfokus memperbaiki pilar-pilar penting ini:
                 </p>
                 <div className="p-5 bg-[#F5F3EC] rounded-2xl border border-white/50 text-xs text-gray-600 italic">
                   "Saat semua elemen ritme hidup selaras, pengelolaan berat badan akan berjalan otomatis tanpa stres berlebih."
@@ -307,11 +254,24 @@ export default function App() {
         <section className="py-20 md:py-24 bg-white">
           <div className="w-full max-w-5xl mx-auto px-4 md:px-8 bg-[#F8F7F2] rounded-[48px] p-8 md:p-14 border border-[#F5F3EC] shadow-inner grid grid-cols-1 md:grid-cols-12 gap-10 items-center">
             
-            {/* Founder Avatar badge visual representation */}
+            {/* Founder Avatar badge visual representation with Image and Fallback SVG */}
             <div className="md:col-span-4 flex justify-center">
               <div className="relative">
-                <div className="w-48 h-48 rounded-full bg-white shadow-md p-2 border-3 border-[#E8B100]">
-                  <div className="w-full h-full rounded-full bg-yellow-50 overflow-hidden flex items-center justify-center">
+                <div className="w-48 h-48 rounded-full bg-white shadow-md p-[2px] border-2 border-[#E8B100] overflow-hidden flex items-center justify-center">
+                  <img 
+                    src="https://i.ibb.co.com/q3jXFGBG/drg-Muhammad-Syafaat-1.jpg" 
+                    alt="drg. Muhammad Syafaat" 
+                    className="w-full h-full object-cover rounded-full"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const fallbackDiv = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallbackDiv) {
+                        fallbackDiv.classList.remove('hidden');
+                        fallbackDiv.classList.add('flex');
+                      }
+                    }}
+                  />
+                  <div className="hidden w-full h-full rounded-full bg-yellow-50 overflow-hidden items-center justify-center">
                     <svg viewBox="0 0 100 100" className="w-28 h-28 text-gray-600 mt-4">
                       <circle cx="50" cy="40" r="22" className="fill-yellow-100" />
                       <path d="M50 18c6 0 11 5 11 11s-5 11-11 11-11-5-11-11 5-11 11-11z" fill="#E8B100" />
@@ -319,27 +279,29 @@ export default function App() {
                     </svg>
                   </div>
                 </div>
-                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-yellow-100 text-[#E8B100] border border-yellow-250 py-1 px-4 rounded-full text-3xs font-extrabold uppercase whitespace-nowrap tracking-wider shadow">
-                  Trusted Coach
-                </div>
               </div>
             </div>
 
             {/* Quote details */}
-            <div className="md:col-span-8 space-y-6">
+            <div className="md:col-span-8 space-y-4">
               <span className="text-xs font-bold text-[#E8B100] tracking-wider uppercase">Pesan dari Founder</span>
-              <h3 className="text-2xl md:text-3xl font-extrabold font-heading text-[#1E1E1E] leading-snug">
-                "Pendekatan Kunyah berfokus pada pola hidup harian yang realistis, tanpa diet ekstrem yang menyiksa."
+              <h3 className="text-xl md:text-2xl font-extrabold font-heading text-[#1E1E1E] leading-snug">
+                "Pendekatan <strong className="font-bold text-[#1E1E1E]">Kunyah</strong> berfokus pada pola hidup harian yang realistis, tanpa diet ekstrem yang menyiksa."
               </h3>
               
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <p className="text-sm font-black text-gray-800">drg. Muhammad Syafaat</p>
-                <p className="text-xs text-gray-400 font-medium">Healthy Productivity Coach & Founder Kunyah</p>
+                <p className="text-xs text-gray-400 font-medium">Healthy Productivity Coach & Founder <strong className="font-bold">Kunyah</strong></p>
               </div>
 
-              <p className="text-xs md:text-sm text-gray-500 leading-relaxed font-light">
-                Sebagai seorang praktisi medis sekaligus productivity coach, saya menyadari bahwa kesehatan tidak bisa dipisahkan dari produktivitas kerja harian. Banyak yang gagal bukan karena kurang kemauan, namun karena program yang mereka jalani terlalu menyiksa dan mengganggu konsentrasi hidup produktif. Bersama Kunyah, kita ciptakan langkah transisi yang mulus.
-              </p>
+              <div className="space-y-3 text-xs md:text-sm text-gray-500 leading-relaxed font-light">
+                <p>
+                  Sebagai seorang praktisi medis sekaligus productivity coach, saya menyadari bahwa kesehatan tidak bisa dipisahkan dari produktivitas kerja harian. Banyak orang gagal bukan karena kurang kemauan, namun karena program diet yang terlalu ekstrem sehingga mengganggu konsentrasi hidup produktif sehari-hari.
+                </p>
+                <p>
+                  Oleh karena itu, kami menghadirkan <strong className="font-bold text-gray-800">Kunyah</strong> (atau <strong className="font-bold text-gray-800">Kunyahlicious</strong>), program edukasi dan pendampingan pola makan sehat yang berfokus membantu Anda mencapai berat badan ideal tanpa diet ekstrem dan tanpa rasa kelaparan menyiksa. Melalui metode yang lebih intuitif, kami membimbing Anda memperbaiki kebiasaan mengunyah serta pola makan agar selaras dengan kesibukan harian Anda secara alami.
+                </p>
+              </div>
             </div>
 
           </div>
@@ -399,7 +361,7 @@ export default function App() {
             </h2>
 
             <p className="text-sm md:text-base text-gray-750 leading-relaxed max-w-2xl mx-auto font-medium">
-              Setelah seluruh pertanyaan selesai dijawab, hasil penilaian profil kesehatan awal Anda akan langsung tampil di kolom di atas. Kami harap Anda <span className="font-semibold text-gray-900">membaca hasil analisis tersebut secara langsung</span>, lalu <span className="font-bold text-[#E8B100]">mengeklik tombol submit untuk terhubung otomatis dengan Admin Kunyah di WhatsApp</span> untuk mendalami detail rekomendasi solusi terbaik bagi Anda.
+              Setelah seluruh pertanyaan selesai dijawab, hasil penilaian profil kesehatan awal Anda akan langsung tampil di kolom di atas. Kami harap Anda <span className="font-semibold text-gray-900">membaca hasil analisis tersebut secara langsung</span>, lalu <span className="font-bold text-[#E8B100]">mengeklik tombol submit untuk terhubung otomatis dengan Admin <strong className="font-bold">Kunyah</strong> di WhatsApp</span> untuk mendalami detail rekomendasi solusi terbaik bagi Anda.
             </p>
 
             <p className="text-xs text-gray-400 font-medium">
@@ -413,7 +375,7 @@ export default function App() {
           <div className="w-full max-w-3xl mx-auto px-4 md:px-8">
             <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
               <span className="text-xs font-bold text-[#E8B100] tracking-wider uppercase">Pertanyaan Umum</span>
-              <h2 className="text-2xl md:text-3xl font-extrabold font-heading text-[#1E1E1E]">FAQ Assessment Kunyah</h2>
+              <h2 className="text-2xl md:text-3xl font-extrabold font-heading text-[#1E1E1E]">FAQ Assessment <strong className="font-bold">Kunyah</strong></h2>
             </div>
 
             <div className="space-y-4">
