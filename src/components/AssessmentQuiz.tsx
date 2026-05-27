@@ -468,7 +468,7 @@ export default function AssessmentQuiz() {
   // Premptive calculation of a beautiful customized WhatsApp link for conversion
   const getWhatsAppLink = (customCategoryTitle?: string) => {
     const matchedCategoryTitle = customCategoryTitle || CATEGORIES[getPrimaryCategoryIndex()].title;
-    const coachNumber = "628212345678"; // Representative/Coach WA number fallback
+    const coachNumber = "6287826749023"; // Representative/Coach WA number fallback
     
     const text = `Halo tim Kunyah, saya sudah menyelesaikan assessment dan ingin mendiskusikan hasil saya.
 
