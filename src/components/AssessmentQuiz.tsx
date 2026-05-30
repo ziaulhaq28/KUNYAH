@@ -18,6 +18,7 @@ import {
   Compass,
   ChevronDown
 } from "lucide-react";
+import { getApiUrl } from "../utils/api";
 
 export interface AssessmentAnswers {
   goal: string;
@@ -367,7 +368,7 @@ export default function AssessmentQuiz() {
     };
 
     try {
-      const response = await fetch("/api/assessment/submit", {
+      const response = await fetch(getApiUrl("/api/assessment/submit"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

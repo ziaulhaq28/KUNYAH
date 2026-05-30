@@ -25,6 +25,7 @@ import {
   User 
 } from "firebase/auth";
 import firebaseConfig from "../../firebase-applet-config.json";
+import { getApiUrl } from "../utils/api";
 
 // Initialize Firebase App & Auth
 const app = initializeApp(firebaseConfig);
@@ -75,7 +76,7 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
   const fetchLeads = async () => {
     setIsLoadingLeads(true);
     try {
-      const res = await fetch("/api/admin/leads");
+      const res = await fetch(getApiUrl("/api/admin/leads"));
       if (res.ok) {
         const text = await res.text();
         try {
@@ -96,7 +97,7 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
 
   const fetchConfig = async () => {
     try {
-      const res = await fetch("/api/admin/config");
+      const res = await fetch(getApiUrl("/api/admin/config"));
       if (res.ok) {
         const text = await res.text();
         try {
@@ -178,7 +179,7 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
     setSyncStatus({ type: "loading", message: "Menyimpan konfigurasi di server..." });
 
     try {
-      const res = await fetch("/api/admin/config", {
+      const res = await fetch(getApiUrl("/api/admin/config"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appsScriptUrl: appsScriptUrl.trim() })
@@ -227,7 +228,7 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
     setSyncStatus({ type: "loading", message: "Mengirim seluruh baris leads harian ke Google Sheet..." });
 
     try {
-      const res = await fetch("/api/admin/sync-all", {
+      const res = await fetch(getApiUrl("/api/admin/sync-all"), {
         method: "POST"
       });
       
