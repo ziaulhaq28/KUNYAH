@@ -8,6 +8,30 @@ import fs from "fs";
 dotenv.config();
 
 const LEADS_FILE = path.join(process.cwd(), "leads.json");
+const CONFIG_FILE = path.join(process.cwd(), "config.json");
+
+// Save and Load config.json on the server
+function loadConfig() {
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      const data = fs.readFileSync(CONFIG_FILE, "utf-8");
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error("Failed to read config file:", err);
+  }
+  return {
+    appsScriptUrl: "https://script.google.com/macros/s/AKfycbwf6FwiJTRWfwQ_fwLi29kr0grkb8d3oocIkXaUVCRJj2szLhg7soo4atWe7bz5bpnzVQ/exec"
+  };
+}
+
+function saveConfig(config: any) {
+  try {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Failed to save config file:", err);
+  }
+}
 
 // Robust JSON persistence for harian leads list
 function loadLeads(): any[] {
@@ -177,8 +201,9 @@ Berikan ringkasan yang sangat ramah, memotivasi, dan optimis menggunakan Bahasa 
       const status = "New";
 
       // Integration placeholder for Apps Script & Spreadsheet
-      // The instruction specifically asks to prepare the Apps Script integration payload structure ready.
-      const appScriptUrl = process.env.APPS_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbwf6FwiJTRWfwQ_fwLi29kr0grkb8d3oocIkXaUVCRJj2szLhg7soo4atWe7bz5bpnzVQ/exec";
+      // Loaded dynamically from saved configurations
+      const config = loadConfig();
+      const appScriptUrl = config.appsScriptUrl || process.env.APPS_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbwf6FwiJTRWfwQ_fwLi29kr0grkb8d3oocIkXaUVCRJj2szLhg7soo4atWe7bz5bpnzVQ/exec";
       let postedToSpreadsheet = false;
 
       // Log the payload containing the exact 14 columns in sequence AND deep case fallbacks for maximum robust mapping
@@ -322,6 +347,98 @@ Berikan ringkasan yang sangat ramah, memotivasi, dan optimis menggunakan Bahasa 
     } catch (error) {
       console.error("Failed to load admin leads:", error);
       return res.status(500).json({ error: "Gagal memuat database leads." });
+    }
+  });
+
+  // Get Admin Apps Script Settings
+  app.get("/api/admin/config", (req, res) => {
+    try {
+      const config = loadConfig();
+      return res.status(200).json(config);
+    } catch (err) {
+      return res.status(500).json({ error: "Gagal memuat konfigurasi server." });
+    }
+  });
+
+  // Save Admin Apps Script Settings
+  app.post("/api/admin/config", (req, res) => {
+    try {
+      const { appsScriptUrl } = req.body;
+      if (!appsScriptUrl || !appsScriptUrl.startsWith("http")) {
+        return res.status(400).json({ error: "URL tidak valid. URL harus diawali dengan http:// atau https://" });
+      }
+      const config = loadConfig();
+      config.appsScriptUrl = appsScriptUrl.trim();
+      saveConfig(config);
+      return res.status(200).json({ success: true, config });
+    } catch (err) {
+      return res.status(500).json({ error: "Gagal menyimpan konfigurasi server." });
+    }
+  });
+
+  // Sync all accumulated leads to Google Sheet via Apps Script
+  app.post("/api/admin/sync-all", async (req, res) => {
+    try {
+      const config = loadConfig();
+      const url = config.appsScriptUrl;
+      if (!url) {
+        return res.status(400).json({ error: "Google Apps Script URL belum dikonfigurasi di server." });
+      }
+
+      const leads = loadLeads();
+      if (leads.length === 0) {
+        return res.status(200).json({ success: true, count: 0, message: "Tidak ada data lead untuk dikirim." });
+      }
+
+      console.log(`Starting Batch Sync of ${leads.length} leads to ${url}`);
+      let successCount = 0;
+      let failCount = 0;
+
+      // Sync individually to preserve standard Google Apps Script doPost/doGet triggers
+      for (const lead of leads) {
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(lead),
+          });
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            // Try urlencoded if JSON didn't work
+            const formBody = new URLSearchParams();
+            Object.entries(lead).forEach(([key, val]) => {
+              formBody.append(key, String(val));
+            });
+            const resForm = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: formBody.toString()
+            });
+            if (resForm.ok) {
+              successCount++;
+            } else {
+              failCount++;
+            }
+          }
+        } catch (err) {
+          console.error("Error syncing lead row in sync-all loop:", err);
+          failCount++;
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        total: leads.length,
+        successCount,
+        failCount,
+        message: `Sinkronisasi selesai! ${successCount} baris berhasil dikirim, ${failCount} gagal.`
+      });
+
+    } catch (err) {
+      console.error("Batch sync exception:", err);
+      return res.status(500).json({ error: "Terjadi kesalahan internal saat sinkronisasi massal." });
     }
   });
 

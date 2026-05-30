@@ -62,31 +62,16 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
   const [isLoadingLeads, setIsLoadingLeads] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
   
-  // Sheet Settings State
-  const [spreadsheetId, setSpreadsheetId] = useState<string>(() => {
-    return localStorage.getItem("kunyah_spreadsheet_id") || "";
-  });
-  const [sheetName, setSheetName] = useState<string>(() => {
-    return localStorage.getItem("kunyah_sheet_name") || "Leads";
-  });
-  
+  // Apps Script Server Settings State
+  const [appsScriptUrl, setAppsScriptUrl] = useState<string>("");
+  const [isSavingConfig, setIsSavingConfig] = useState<boolean>(false);
+  const [isSyncingAll, setIsSyncingAll] = useState<boolean>(false);
   const [syncStatus, setSyncStatus] = useState<{
     type: "idle" | "loading" | "success" | "error";
     message: string;
   }>({ type: "idle", message: "" });
 
-  // Handle Auth State Changes using Firebase
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (!currentUser) {
-        setAccessToken(null);
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Fetch leads from backend server
+  // Fetch leads and configuration from server
   const fetchLeads = async () => {
     setIsLoadingLeads(true);
     try {
@@ -104,8 +89,23 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
     }
   };
 
+  const fetchConfig = async () => {
+    try {
+      const res = await fetch("/api/admin/config");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.appsScriptUrl) {
+          setAppsScriptUrl(data.appsScriptUrl);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching config:", err);
+    }
+  };
+
   useEffect(() => {
     fetchLeads();
+    fetchConfig();
   }, []);
 
   const handleGoogleSignIn = async () => {
@@ -147,106 +147,94 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
     }
   };
 
-  const saveSettings = () => {
-    localStorage.setItem("kunyah_spreadsheet_id", spreadsheetId.trim());
-    localStorage.setItem("kunyah_sheet_name", sheetName.trim());
-    setSyncStatus({
-      type: "success",
-      message: "Pengaturan Spreadsheet disimpan lokal!"
-    });
-    setTimeout(() => {
-      setSyncStatus({ type: "idle", message: "" });
-    }, 3000);
-  };
-
-  // Sync / Append rows to Google Sheet via REST API v4
-  const syncToGoogleSheets = async () => {
-    if (!accessToken) {
+  const handleSaveAppsScriptUrl = async () => {
+    if (!appsScriptUrl.trim()) {
       setSyncStatus({ 
         type: "error", 
-        message: "Silakan hubungkan Google Akun Anda terlebih dahulu." 
+        message: "URL Google Apps Script tidak boleh kosong." 
       });
       return;
     }
 
-    if (!spreadsheetId.trim()) {
+    if (!appsScriptUrl.trim().startsWith("http")) {
       setSyncStatus({ 
         type: "error", 
-        message: "Spreadsheet ID tidak boleh kosong." 
+        message: "URL tidak valid. Harus diawali dengan http:// atau https://" 
       });
       return;
     }
 
-    setSyncStatus({ type: "loading", message: "Menghubungkan ke Google Sheets API..." });
+    setIsSavingConfig(true);
+    setSyncStatus({ type: "loading", message: "Menyimpan konfigurasi di server..." });
 
     try {
-      // Ensure we append headers first if sheet is empty or we can just append standard values
-      // We append all leads currently in the list
-      const rows = leads.map(lead => [
-        lead.Timestamp || "",
-        lead.Nama || "",
-        lead.WA || "",
-        lead.Goal || "",
-        lead.Challenge || "",
-        lead.Activity || "",
-        lead.Sleep || "",
-        lead.Dinner || "",
-        lead["UTM Source"] || "",
-        lead["UTM Medium"] || "",
-        lead.Campaign || "",
-        lead.Content || "",
-        lead.FBCLID || "",
-        lead.Status || "New",
-        lead["AI Summary"] || ""
-      ]);
+      const res = await fetch("/api/admin/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appsScriptUrl: appsScriptUrl.trim() })
+      });
 
-      if (rows.length === 0) {
-        setSyncStatus({ 
-          type: "success", 
-          message: "Tidak ada data lead baru untuk disinkronkan." 
-        });
-        return;
-      }
-
-      const activeSheetName = sheetName.trim() || "Leads";
-      const range = `${activeSheetName}!A1`;
-
-      // Google Sheets API batch update or append rows
-      // We use append which automatically matches layout
-      const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId.trim()}/values/${range}:append?valueInputOption=USER_ENTERED`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            values: rows
-          })
-        }
-      );
-
-      const resData = await response.json();
-
-      if (response.ok) {
+      if (res.ok) {
         setSyncStatus({
           type: "success",
-          message: `Sukses sinkronisasi! ${rows.length} lead berhasil ditambahkan ke sheet "${activeSheetName}".`
+          message: "Koneksi Google Apps Script berhasil disimpan & didaftarkan aktif!"
         });
+        setTimeout(() => {
+          setSyncStatus({ type: "idle", message: "" });
+        }, 3000);
       } else {
-        console.error("Sheets API error:", resData);
+        const data = await res.json();
         setSyncStatus({
           type: "error",
-          message: resData.error?.message || "Gagal sinkron Google Sheet. Cek API permissions & Sheet ID."
+          message: data.error || "Gagal menyimpan konfigurasi server."
         });
       }
-    } catch (err: any) {
-      console.error("Sync error:", err);
+    } catch (err) {
       setSyncStatus({
         type: "error",
-        message: "Koneksi terputus. Pastikan Spreadsheet ID valid & Anda memiliki hak edit."
+        message: "Terjadi kesalahan rintangan koneksi dengan server."
       });
+    } finally {
+      setIsSavingConfig(false);
+    }
+  };
+
+  const handleBatchSync = async () => {
+    if (!appsScriptUrl.trim()) {
+      setSyncStatus({ 
+        type: "error", 
+        message: "Pastikan Anda mengisi & menyimpan URL Google Apps Script terlebih dahulu." 
+      });
+      return;
+    }
+
+    setIsSyncingAll(true);
+    setSyncStatus({ type: "loading", message: "Mengirim seluruh baris leads harian ke Google Sheet..." });
+
+    try {
+      const res = await fetch("/api/admin/sync-all", {
+        method: "POST"
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setSyncStatus({
+          type: "success",
+          message: data.message || "Berhasil mengirim seluruh database ke Google Sheet!"
+        });
+      } else {
+        setSyncStatus({
+          type: "error",
+          message: data.error || "Gagal memproses pengiriman data."
+        });
+      }
+    } catch (err) {
+      setSyncStatus({
+        type: "error",
+        message: "Gagal terhubung ke modul sinkronisasi server harian."
+      });
+    } finally {
+      setIsSyncingAll(false);
     }
   };
 
@@ -287,113 +275,79 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
         <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12">
           
           {/* Left panel - Connection setup */}
-          <div className="lg:col-span-4 border-r border-gray-100 p-6 overflow-y-auto space-y-6 bg-gray-50/50">
+          <div className="lg:col-span-5 border-r border-gray-100 p-6 overflow-y-auto space-y-6 bg-gray-50/50">
             <div className="space-y-4">
-              <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
+              <h2 className="text-sm font-extrabold text-gray-800 uppercase tracking-wide flex items-center gap-2">
                 <Settings className="w-4 h-4 text-[#E8B100]" />
                 Koneksi Google Sheets
               </h2>
               <p className="text-xs text-gray-500 leading-relaxed font-light">
-                Otorisasi Google di bawah ini untuk mengaktifkan sinkronisasi mandiri ke file spreadsheet milik Anda langsung dari dashboard ini.
+                Kunyah menggunakan Google Apps Script untuk mengirimkan hasil assessment pengunjung langsung ke baris spreadsheet Anda secara real-time tanpa rintangan login yang mengganggu.
               </p>
             </div>
 
-            {/* Auth panel */}
-            {!user ? (
-              <div className="bg-white p-5 rounded-2xl border border-gray-200/60 shadow-sm space-y-4 text-center">
-                <p className="text-xs text-gray-400">Google Sheets API memerlukan login akun admin</p>
-                <button
-                  onClick={handleGoogleSignIn}
-                  disabled={isLoggingIn}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 text-xs font-semibold text-gray-700 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <path fill="#EA4335" d="M12 5.04c1.78 0 3.39.61 4.65 1.8l3.48-3.48C17.98 1.19 15.15 0 12 0 7.31 0 3.26 2.69 1.25 6.62l3.96 3.07C6.16 6.62 8.87 5.04 12 5.04z" />
-                    <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.35H12v4.51h6.46c-.29 1.48-1.14 2.73-2.42 3.57l3.77 2.92c2.2-2.03 3.48-5.02 3.48-8.65z" />
-                    <path fill="#FBBC05" d="M5.21 14.54c-.23-.69-.37-1.43-.37-2.2s.14-1.51.37-2.2L1.25 7.07c-.83 1.66-1.25 3.53-1.25 5.5s.42 3.84 1.25 5.5l3.96-3.07z" />
-                    <path fill="#34A853" d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-3.77-2.92c-1.05.7-2.39 1.13-3.95 1.13-3.13 0-5.78-2.12-6.73-5.04L1.29 17.3c2 3.93 6.05 6.62 10.71 6.62z" />
-                  </svg>
-                  {isLoggingIn ? "Menghubungkan..." : "Hubungkan ke Google"}
-                </button>
-              </div>
-            ) : (
-              <div className="bg-white p-5 rounded-2xl border border-yellow-200/80 shadow-sm space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-2xs font-extrabold text-emerald-600 uppercase tracking-wider">Terkoneksi</span>
-                  </div>
-                  <button 
-                    onClick={handleSignOut}
-                    className="text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1 text-[10px] uppercase font-bold"
-                  >
-                    <LogOut className="w-3 h-3" /> Logout
-                  </button>
-                </div>
-                <div className="flex items-center gap-3">
-                  <img 
-                    src={user.photoURL || ""} 
-                    alt={user.displayName || "Admin"} 
-                    className="w-10 h-10 rounded-full border border-[#E8B100]/20"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                  <div>
-                    <p className="text-xs font-bold text-gray-800">{user.displayName}</p>
-                    <p className="text-[10px] text-gray-400 truncate max-w-[180px]">{user.email}</p>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Quick Tutorial based on User screenshot */}
+            <div className="bg-yellow-50/80 p-4.5 rounded-2xl border border-yellow-100/80 space-y-3.5 shadow-sm">
+              <h4 className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-[#E8B100] animate-pulse" />
+                Panduan Menghubungkan (1 Menit):
+              </h4>
+              <ol className="list-decimal list-inside text-[11px] leading-relaxed text-amber-950 font-light space-y-2">
+                <li>
+                  Buka editor <strong className="font-semibold text-[#1E1E1E]">Google Apps Script</strong> Anda.
+                </li>
+                <li>
+                  Klik tombol <strong className="font-semibold text-blue-700">Terapkan (Deploy) &rarr; Penerapan Baru (New Deployment)</strong>.
+                </li>
+                <li>
+                  Pilih jenis <strong className="font-semibold text-[#1E1E1E]">Aplikasi Web (Web App)</strong>.
+                </li>
+                <li>
+                  <strong className="text-rose-700">PENTING:</strong> Ubah pengaturan <strong className="font-bold">"Yang memiliki akses (Who has access)"</strong> menjadi <strong className="font-bold">"Siapa saja (Anyone)"</strong> agar data formulir dapat masuk secara otomatis.
+                </li>
+                <li>
+                  Setelah berhasil, salin <strong className="font-semibold text-emerald-700 text-xs text-[#1E1E1E]">Aplikasi web URL</strong> (ini adalah <strong className="underline">Link Kedua</strong> pada gambar Anda yang berakhiran <code className="bg-white/80 px-1 py-0.5 rounded font-mono">/exec</code>).
+                </li>
+              </ol>
+            </div>
 
             {/* Config Fields */}
             <div className="bg-white p-5 rounded-2xl border border-gray-200/60 shadow-sm space-y-4">
-              <h3 className="text-xs font-bold text-gray-800 flex items-center gap-1.5 border-b border-gray-100 pb-2">
+              <h3 className="text-xs font-bold text-gray-800 flex items-center gap-1.5 border-b border-gray-100 pb-2.5">
                 <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-                Target Spreadsheet
+                Konfigurasi Webhook Server
               </h3>
               
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Spreadsheet ID</label>
+                  <label className="block text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-1.5">Aplikasi Web URL (Apps Script Link-2)</label>
                   <input 
                     type="text" 
-                    value={spreadsheetId} 
-                    onChange={(e) => setSpreadsheetId(e.target.value)}
-                    placeholder="Contoh: 1X_abcdef12345..." 
-                    className="w-full px-3.5 py-2.5 bg-gray-50 focus:bg-white text-xs text-gray-800 rounded-xl border border-gray-200 focus:border-[#E8B100] outline-none transition-all placeholder:text-gray-300"
+                    value={appsScriptUrl} 
+                    onChange={(e) => setAppsScriptUrl(e.target.value)}
+                    placeholder="https://script.google.com/macros/s/.../exec" 
+                    className="w-full px-3.5 py-3 bg-gray-50 focus:bg-white text-xs text-gray-800 rounded-xl border border-gray-200 focus:border-[#E8B100] outline-none transition-all placeholder:text-gray-300 font-mono"
                   />
-                  <p className="text-[10px] text-gray-400 mt-1 leading-snug">
-                    Salin ID panjang dari URL Google Sheet Anda: <code className="bg-gray-100 px-1 py-0.5 rounded text-gray-600 font-mono">/d/<strong>SPREADSHEET_ID_DISINI</strong>/edit</code>
+                  <p className="text-[10px] text-gray-400 mt-1.5 leading-snug font-light">
+                    Pastikan domain aman, berakhiran dengan <code className="bg-gray-100 px-1 py-0.5 rounded text-gray-600 font-mono">/exec</code> dan dapat diakses publik.
                   </p>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Sheet Name (Nama Tab)</label>
-                  <input 
-                    type="text" 
-                    value={sheetName} 
-                    onChange={(e) => setSheetName(e.target.value)}
-                    placeholder="Contoh: Leads atau Sheet1" 
-                    className="w-full px-3.5 py-2.5 bg-gray-50 focus:bg-white text-xs text-gray-800 rounded-xl border border-gray-200 focus:border-[#E8B100] outline-none transition-all"
-                  />
-                  <p className="text-[10px] text-gray-400 mt-1">Pastikan nama tab di Spreadsheet Anda cocok persis.</p>
-                </div>
-
-                <div className="pt-2 flex gap-2">
+                <div className="pt-1 flex flex-col gap-2">
                   <button
-                    onClick={saveSettings}
-                    className="flex-1 py-2 px-3 text-2xs font-extrabold uppercase bg-gray-100 hover:bg-gray-250 text-gray-600 rounded-xl transition-colors cursor-pointer"
+                    onClick={handleSaveAppsScriptUrl}
+                    disabled={isSavingConfig}
+                    className="w-full py-2.5 px-4 text-xs font-extrabold uppercase bg-gray-900 hover:bg-black text-white rounded-xl transition-all shadow-sm hover:shadow-md cursor-pointer disabled:opacity-50"
                   >
-                    Simpan Saja
+                    {isSavingConfig ? "Menyimpan..." : "Simpan & Daftarkan URL"}
                   </button>
+                  
                   <button
-                    onClick={syncToGoogleSheets}
-                    disabled={!user || !spreadsheetId}
-                    className="flex-1 py-2 px-3 text-2xs font-extrabold uppercase bg-[#E8B100] hover:bg-[#D5A200] disabled:bg-gray-100 disabled:text-gray-400 text-white rounded-xl shadow-md shadow-yellow-500/10 transition-all cursor-pointer"
+                    onClick={handleBatchSync}
+                    disabled={isSyncingAll || !appsScriptUrl}
+                    className="w-full py-2.5 px-4 text-xs font-extrabold uppercase bg-[#E8B100] hover:bg-[#D5A200] disabled:bg-gray-100 disabled:text-gray-400 text-white rounded-xl shadow-md shadow-yellow-500/10 transition-all cursor-pointer disabled:shadow-none"
                   >
-                    Sync Sekarang
+                    {isSyncingAll ? "Sinkronisasi Berjalan..." : "Sync Semua Leads Sekarang"}
                   </button>
                 </div>
               </div>
@@ -410,48 +364,21 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
                   {syncStatus.type === "loading" && <RefreshCw className="w-4 h-4 animate-spin shrink-0 mt-0.5" />}
                   {syncStatus.type === "success" && <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />}
                   {syncStatus.type === "error" && <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />}
-                  <div className="flex-1">
-                    <p className="font-bold">{syncStatus.type === "loading" ? "Proses..." : syncStatus.type === "success" ? "Sukses!" : "Kesalahan Otorisasi"}</p>
-                    {syncStatus.message !== "UNAUTHORIZED_DOMAIN" ? (
-                      <p className="text-[11px] leading-relaxed mt-0.5 font-light">{syncStatus.message}</p>
-                    ) : null}
+                  <div className="flex-1 text-[11px] leading-relaxed">
+                    <p className="font-bold">{syncStatus.type === "loading" ? "Sedang Memproses..." : syncStatus.type === "success" ? "Pemberitahuan Sukses!" : "Kesalahan Sistem"}</p>
+                    <p className="text-[10px] leading-relaxed mt-0.5 font-light text-gray-600">{syncStatus.message}</p>
                   </div>
                 </div>
-
-                {syncStatus.message === "UNAUTHORIZED_DOMAIN" && (
-                  <div className="text-[11px] leading-relaxed mt-1 text-rose-950 font-sans space-y-2.5 bg-rose-100/50 p-3.5 rounded-xl border border-rose-200/55">
-                    <p className="font-bold text-rose-950">⚠️ Domain Belum Terdaftar di Firebase!</p>
-                    <p className="text-gray-600 leading-relaxed font-light">
-                      Firebase memerlukan persetujuan domain agar login Google dapat berfungsi dengan aman di container sandbox ini.
-                    </p>
-                    <div className="space-y-1.5">
-                      <p className="font-bold text-[10px] text-gray-500 uppercase tracking-wider">Langkah Perbaikan (Hanya 1 Menit):</p>
-                      <ol className="list-decimal list-inside space-y-1 text-gray-600 font-light">
-                        <li>Buka <a href="https://console.firebase.google.com/" target="_blank" rel="noreferrer" className="underline font-bold text-blue-600 hover:text-blue-800">Firebase Console</a></li>
-                        <li>Pilih Project Anda: <strong className="font-mono font-bold bg-white px-1.5 py-0.5 rounded text-rose-700">stalwart-scene-g7k72</strong></li>
-                        <li>Masuk ke menu <strong className="text-gray-700">Authentication</strong> (Kiri) &rarr; Tab <strong className="text-gray-700">Settings</strong> (atau <strong className="text-gray-700">Authorized Domains</strong>)</li>
-                        <li>Klik <strong className="text-gray-750">Add Domain</strong>, lalu tambahkan kedua domain di bawah ini:</li>
-                      </ol>
-                    </div>
-                    <div className="space-y-1 font-mono text-[9px] bg-white p-2.5 rounded-lg border border-rose-200/60 select-all leading-tight text-gray-700 break-all">
-                      <div>ais-dev-wcxrrczf7xtofhrzwtykfy-258600169716.asia-southeast1.run.app</div>
-                      <div>ais-pre-wcxrrczf7xtofhrzwtykfy-258600169716.asia-southeast1.run.app</div>
-                    </div>
-                    <p className="text-[10px] text-gray-500 leading-tight">
-                      💡 <em>Setelah ditambahkan, muat ulang (Refresh) halaman web ini dan klik "Hubungkan ke Google" lagi.</em>
-                    </p>
-                  </div>
-                )}
               </div>
             )}
             
-            <div className="bg-yellow-50/50 p-4 rounded-2xl border border-yellow-100 text-[10px] text-gray-500 leading-relaxed md:p-5">
-              💡 <strong>Integrasi Apps Script Aktif:</strong> Saat pengunjung baru mengisi form assessment, data tetap dikirim secara simultan ke Google Apps Script Anda sebagai backup otomatis demi menjaga redundansi database.
+            <div className="bg-yellow-50/50 p-4 rounded-2xl border border-yellow-100 text-[10px] text-gray-500 leading-relaxed md:p-5 font-light">
+              💡 <strong>Integrasi Real-time Aktif:</strong> Setiap kali calon klien baru mengirimkan formulir sehat "Kunyah", data akan langsung terkirim secara otomatis ke Google Apps Script di atas secara instan.
             </div>
           </div>
 
           {/* Right panel - Lead Table and View */}
-          <div className="lg:col-span-8 p-6 overflow-hidden flex flex-col space-y-4">
+          <div className="lg:col-span-7 p-6 overflow-hidden flex flex-col space-y-4">
             
             {/* Search and reload header */}
             <div className="flex flex-col sm:flex-row gap-3 justify-between items-center shrink-0">
