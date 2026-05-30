@@ -121,10 +121,17 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
       }
     } catch (err: any) {
       console.error("Sign-in error:", err);
-      setSyncStatus({ 
-        type: "error", 
-        message: err.message || "Gagal login dengan Google." 
-      });
+      if (err.code === "auth/unauthorized-domain" || String(err.message).toLowerCase().includes("unauthorized-domain") || String(err.code).toLowerCase().includes("unauthorized-domain")) {
+        setSyncStatus({ 
+          type: "error", 
+          message: "UNAUTHORIZED_DOMAIN" 
+        });
+      } else {
+        setSyncStatus({ 
+          type: "error", 
+          message: err.message || "Gagal login dengan Google." 
+        });
+      }
     } finally {
       setIsLoggingIn(false);
     }
@@ -394,18 +401,47 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
 
             {/* Status alerts */}
             {syncStatus.type !== "idle" && (
-              <div className={`p-4 rounded-2xl text-xs flex items-start gap-2.5 ${
+              <div className={`p-4 rounded-2xl text-xs flex flex-col gap-2.5 ${
                 syncStatus.type === "loading" ? "bg-amber-50 text-amber-800 border border-amber-200" :
                 syncStatus.type === "success" ? "bg-emerald-50 text-emerald-800 border border-emerald-200" :
                 "bg-rose-50 text-rose-800 border border-rose-200"
               }`}>
-                {syncStatus.type === "loading" && <RefreshCw className="w-4 h-4 animate-spin shrink-0 mt-0.5" />}
-                {syncStatus.type === "success" && <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />}
-                {syncStatus.type === "error" && <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />}
-                <div>
-                  <p className="font-bold">{syncStatus.type === "loading" ? "Proses..." : syncStatus.type === "success" ? "Sukses!" : "Kesalahan"}</p>
-                  <p className="text-[11px] leading-relaxed mt-0.5 font-light">{syncStatus.message}</p>
+                <div className="flex items-start gap-2.5 w-full">
+                  {syncStatus.type === "loading" && <RefreshCw className="w-4 h-4 animate-spin shrink-0 mt-0.5" />}
+                  {syncStatus.type === "success" && <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />}
+                  {syncStatus.type === "error" && <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />}
+                  <div className="flex-1">
+                    <p className="font-bold">{syncStatus.type === "loading" ? "Proses..." : syncStatus.type === "success" ? "Sukses!" : "Kesalahan Otorisasi"}</p>
+                    {syncStatus.message !== "UNAUTHORIZED_DOMAIN" ? (
+                      <p className="text-[11px] leading-relaxed mt-0.5 font-light">{syncStatus.message}</p>
+                    ) : null}
+                  </div>
                 </div>
+
+                {syncStatus.message === "UNAUTHORIZED_DOMAIN" && (
+                  <div className="text-[11px] leading-relaxed mt-1 text-rose-950 font-sans space-y-2.5 bg-rose-100/50 p-3.5 rounded-xl border border-rose-200/55">
+                    <p className="font-bold text-rose-950">⚠️ Domain Belum Terdaftar di Firebase!</p>
+                    <p className="text-gray-600 leading-relaxed font-light">
+                      Firebase memerlukan persetujuan domain agar login Google dapat berfungsi dengan aman di container sandbox ini.
+                    </p>
+                    <div className="space-y-1.5">
+                      <p className="font-bold text-[10px] text-gray-500 uppercase tracking-wider">Langkah Perbaikan (Hanya 1 Menit):</p>
+                      <ol className="list-decimal list-inside space-y-1 text-gray-600 font-light">
+                        <li>Buka <a href="https://console.firebase.google.com/" target="_blank" rel="noreferrer" className="underline font-bold text-blue-600 hover:text-blue-800">Firebase Console</a></li>
+                        <li>Pilih Project Anda: <strong className="font-mono font-bold bg-white px-1.5 py-0.5 rounded text-rose-700">stalwart-scene-g7k72</strong></li>
+                        <li>Masuk ke menu <strong className="text-gray-700">Authentication</strong> (Kiri) &rarr; Tab <strong className="text-gray-700">Settings</strong> (atau <strong className="text-gray-700">Authorized Domains</strong>)</li>
+                        <li>Klik <strong className="text-gray-750">Add Domain</strong>, lalu tambahkan kedua domain di bawah ini:</li>
+                      </ol>
+                    </div>
+                    <div className="space-y-1 font-mono text-[9px] bg-white p-2.5 rounded-lg border border-rose-200/60 select-all leading-tight text-gray-700 break-all">
+                      <div>ais-dev-wcxrrczf7xtofhrzwtykfy-258600169716.asia-southeast1.run.app</div>
+                      <div>ais-pre-wcxrrczf7xtofhrzwtykfy-258600169716.asia-southeast1.run.app</div>
+                    </div>
+                    <p className="text-[10px] text-gray-500 leading-tight">
+                      💡 <em>Setelah ditambahkan, muat ulang (Refresh) halaman web ini dan klik "Hubungkan ke Google" lagi.</em>
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             

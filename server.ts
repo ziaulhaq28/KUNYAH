@@ -14,10 +14,61 @@ function loadLeads(): any[] {
   try {
     if (fs.existsSync(LEADS_FILE)) {
       const data = fs.readFileSync(LEADS_FILE, "utf-8");
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
     }
+    
+    // Fallback/Initial sample leads for interactive feedback
+    const sampleLeads = [
+      {
+        Timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
+        Nama: "Ahmad Fauzi",
+        WA: "wa.me/6281234567890",
+        Goal: "Menurunkan berat badan 10kg & memperbaiki stamina untuk bermain dengan anak",
+        Challenge: "Sering lembur malam, tergoda ngemil gorengan dan manis setelah jam 9 malam",
+        Activity: "Sangat sibuk (Duduk di depan laptop > 8 jam/hari)",
+        Sleep: "Kurang tidur (4-5 jam sehari)",
+        Dinner: "Makan berat porsi penuh (< 2 jam sebelum tidur)",
+        "UTM Source": "instagram",
+        "UTM Medium": "ads",
+        Status: "New",
+        "AI Summary": "Calon klien Ahmad Fauzi bertekad menurunkan berat badan 10kg, namun dibatasi oleh tantangan ngemil malam akibat kelelahan lembur serta kurang tidur. Rekomendasi utama: fokus memundurkan porsi makan berat sebelum jam 7 malam dan memperbaiki sirkadian."
+      },
+      {
+        Timestamp: new Date(Date.now() - 120 * 60000).toISOString(),
+        Nama: "Siti Rahmawati",
+        WA: "wa.me/6287712345678",
+        Goal: "Membentuk kebiasaan olahraga teratur & mengurangi begadang",
+        Challenge: "Gampang lapar saat stres kerja dan kurang lingkungan pendukung (support system)",
+        Activity: "Sedang (Sering berdiri / berjalan kaki ringan)",
+        Sleep: "Cukup tidur (7-8 jam)",
+        Dinner: "Lupa makan malam / diganti cemilan manis ringan seperti martabak",
+        "UTM Source": "tiktok",
+        "UTM Medium": "organic",
+        Status: "New",
+        "AI Summary": "Siti memiliki pola tidur yang baik (7-8 jam) namun terganggu kebiasaan mengganti makan malam penuh dengan cemilan manis saat stres kerja. Disarankan peningkatan konsumsi protein padat di sore hari untuk meredam craving gula."
+      },
+      {
+        Timestamp: new Date(Date.now() - 360 * 60000).toISOString(),
+        Nama: "Budi Hartono",
+        WA: "wa.me/628999888777",
+        Goal: "Menurunkan kadar kolesterol tinggi & merampingkan lingkar perut",
+        Challenge: "Kebiasaan makan gorengan bareng rekan kerja di kantor hampir setiap sore",
+        Activity: "Sangat pasif (Jarang bergerak / olahraga)",
+        Sleep: "Kurang tidur (4-5 jam sehari)",
+        Dinner: "Makan berat porsi penuh (2-3 jam sebelum tidur)",
+        "UTM Source": "google",
+        "UTM Medium": "search",
+        Status: "New",
+        "AI Summary": "Budi menghadapi kolesterol tinggi dipicu lingkungan kerja yang tinggi konsumsi gorengan serta kurangnya mobilitas fisik. Intervensi terfokus pada pergantian gorengan sore hari dengan buah berserat tinggi & latihan peregangan statis."
+      }
+    ];
+    fs.writeFileSync(LEADS_FILE, JSON.stringify(sampleLeads, null, 2), "utf-8");
+    return sampleLeads;
   } catch (err) {
-    console.error("Failed to read leads file:", err);
+    console.error("Failed to read/prepopulate leads file:", err);
   }
   return [];
 }
