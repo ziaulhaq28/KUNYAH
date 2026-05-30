@@ -15,7 +15,8 @@ import {
   Brain,
   RotateCcw,
   Calendar,
-  Compass
+  Compass,
+  ChevronDown
 } from "lucide-react";
 
 export interface AssessmentAnswers {
@@ -728,12 +729,33 @@ Saya ingin mendapatkan arahan awal dari tim Kunyah.`;
               </div>
             </div>
 
+            {/* Elegant bouncing down arrow to alert user about the social validation section below */}
+            <motion.div 
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: [0, 8, 0] }}
+              transition={{ 
+                opacity: { delay: 0.5, duration: 0.4 },
+                y: { repeat: Infinity, duration: 1.8, ease: "easeInOut" } 
+              }}
+              className="flex flex-col items-center gap-1.5 mt-8 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer select-none"
+              onClick={() => {
+                const element = document.getElementById("social-validation-section");
+                if (element) {
+                  element.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+            >
+              <span className="text-[10px] font-bold tracking-wider uppercase text-gray-450">Lihat Hasil Analisis Lainnya</span>
+              <ChevronDown className="w-4 h-4 text-[#E8B100]" />
+            </motion.div>
+
             {/* NEW FEATURE 1: Social Identity Validation Section */}
             <motion.div 
+              id="social-validation-section"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="mt-14 pt-12 border-t border-gray-100 text-left"
+              className="mt-14 pt-12 border-t border-gray-100 text-left scroll-mt-6"
             >
               <div className="text-center max-w-xl mx-auto mb-10 space-y-2">
                 <span className="text-xs font-bold text-[#E8B100] uppercase tracking-wider">Social Validation</span>

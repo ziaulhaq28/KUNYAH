@@ -101,7 +101,7 @@ Berikan ringkasan yang sangat ramah, memotivasi, dan optimis menggunakan Bahasa 
 
       // Integration placeholder for Apps Script & Spreadsheet
       // The instruction specifically asks to prepare the Apps Script integration payload structure ready.
-      const appScriptUrl = process.env.APPS_SCRIPT_URL;
+      const appScriptUrl = process.env.APPS_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbwf6FwiJTRWfwQ_fwLi29kr0grkb8d3oocIkXaUVCRJj2szLhg7soo4atWe7bz5bpnzVQ/exec";
       let postedToSpreadsheet = false;
 
       // Log the payload containing the exact 14 columns in sequence AND deep case fallbacks for maximum robust mapping
