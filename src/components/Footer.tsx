@@ -1,7 +1,11 @@
 import { Instagram, HelpCircle, MessageSquare, Heart } from "lucide-react";
 import Logo from "./Logo";
 
-export default function Footer() {
+interface FooterProps {
+  onAdminClick?: () => void;
+}
+
+export default function Footer({ onAdminClick }: FooterProps) {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -55,7 +59,17 @@ export default function Footer() {
 
         {/* Lower Banner Copyright */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-gray-400 font-medium">
-          <p>© {currentYear} <strong className="font-bold">Kunyah</strong> Indonesia. Hak Cipta Dilindungi.</p>
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center sm:text-left">
+            <p>© {currentYear} <strong className="font-bold">Kunyah</strong> Indonesia. Hak Cipta Dilindungi.</p>
+            {onAdminClick && (
+              <button 
+                onClick={onAdminClick}
+                className="text-[10px] uppercase font-bold text-gray-400 hover:text-[#E8B100] tracking-wider transition-colors cursor-pointer"
+              >
+                • Portal Admin
+              </button>
+            )}
+          </div>
           <p className="flex items-center gap-1">
             Dibuat dengan <Heart className="w-3.5 h-3.5 text-red-400 fill-current" /> untuk perubahan pola hidup sehat Indonesia.
           </p>

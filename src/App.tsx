@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import AssessmentQuiz from "./components/AssessmentQuiz";
 import OrderNotification from "./components/OrderNotification";
+import AdminPortal from "./components/AdminPortal";
 import { 
   Sparkles, 
   ChevronRight, 
@@ -22,6 +23,17 @@ import {
 
 export default function App() {
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
+
+  // Auto detect if user is loading the app with ?admin=true
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("admin") === "true") {
+        setIsAdminOpen(true);
+      }
+    }
+  }, []);
 
   const toggleFaq = (index: number) => {
     setFaqOpen(faqOpen === index ? null : index);
@@ -408,8 +420,13 @@ export default function App() {
       </main>
 
       {/* FOOTER */}
-      <Footer />
+      <Footer onAdminClick={() => setIsAdminOpen(true)} />
       <OrderNotification />
+
+      {/* Admin Portal Overlay */}
+      {isAdminOpen && (
+        <AdminPortal onClose={() => setIsAdminOpen(false)} />
+      )}
     </div>
   );
 }

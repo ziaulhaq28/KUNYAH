@@ -3,8 +3,34 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import fs from "fs";
 
 dotenv.config();
+
+const LEADS_FILE = path.join(process.cwd(), "leads.json");
+
+// Robust JSON persistence for harian leads list
+function loadLeads(): any[] {
+  try {
+    if (fs.existsSync(LEADS_FILE)) {
+      const data = fs.readFileSync(LEADS_FILE, "utf-8");
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error("Failed to read leads file:", err);
+  }
+  return [];
+}
+
+function saveLead(lead: any) {
+  try {
+    const leads = loadLeads();
+    leads.unshift(lead); // newest lead remains on top for easy visualization
+    fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Failed to save lead:", err);
+  }
+}
 
 async function startServer() {
   const app = express();
@@ -150,7 +176,13 @@ Berikan ringkasan yang sangat ramah, memotivasi, dan optimis menggunakan Bahasa 
       console.log("--- GOOGLE SPREADSHEET ROW LOG ---");
       console.log(JSON.stringify(spreadsheetData, null, 2));
 
+      // Save submission to our robust local JSON database file harian
+      saveLead(spreadsheetData);
+
       if (appScriptUrl) {
+        console.log("Triggering robust Apps Script Sync to URL:", appScriptUrl);
+        
+        // 1. First Attempt: POST JSON (the standard modern method)
         try {
           const response = await fetch(appScriptUrl, {
             method: "POST",
@@ -161,11 +193,60 @@ Berikan ringkasan yang sangat ramah, memotivasi, dan optimis menggunakan Bahasa 
           });
           if (response.ok) {
             postedToSpreadsheet = true;
+            console.log("Apps Script Sync Status: Success via POST JSON");
           } else {
-            console.warn("Apps Script responded with non-ok status:", response.status);
+            console.warn("POST JSON responded with non-ok status:", response.status);
           }
         } catch (err) {
-          console.error("Spreadsheet Sync Failed (is APPS_SCRIPT_URL correct?):", err);
+          console.error("POST JSON attempt failed, trying urlencoded...", err);
+        }
+
+        // 2. Second Attempt (URL-encoded POST): For Apps Scripts configured to pull from e.parameter in doPost(e)
+        if (!postedToSpreadsheet) {
+          try {
+            const formBody = new URLSearchParams();
+            Object.entries(spreadsheetData).forEach(([key, val]) => {
+              formBody.append(key, String(val));
+            });
+
+            const responseForm = await fetch(appScriptUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: formBody.toString()
+            });
+            if (responseForm.ok) {
+              postedToSpreadsheet = true;
+              console.log("Apps Script Sync Status: Success via POST Form URL-encoded");
+            } else {
+              console.warn("POST Form URL-encoded responded with non-ok status:", responseForm.status);
+            }
+          } catch (errForm) {
+            console.error("POST Form URL-encoded attempt failed, trying query parameters GET...", errForm);
+          }
+        }
+
+        // 3. Third Attempt (GET searchParams): For Apps Scripts configured using doGet(e) and e.parameter
+        if (!postedToSpreadsheet) {
+          try {
+            const getUrl = new URL(appScriptUrl);
+            Object.entries(spreadsheetData).forEach(([key, val]) => {
+              getUrl.searchParams.append(key, String(val));
+            });
+
+            const responseGet = await fetch(getUrl.toString(), {
+              method: "GET"
+            });
+            if (responseGet.ok) {
+              postedToSpreadsheet = true;
+              console.log("Apps Script Sync Status: Success via GET Query Parameters");
+            } else {
+              console.warn("GET responded with non-ok status:", responseGet.status);
+            }
+          } catch (errGet) {
+            console.error("GET attempt failed. Sync incomplete.", errGet);
+          }
         }
       }
 
@@ -179,6 +260,17 @@ Berikan ringkasan yang sangat ramah, memotivasi, dan optimis menggunakan Bahasa 
     } catch (error: any) {
       console.error("Submit Error:", error);
       return res.status(500).json({ error: "Gagal memproses assessment harian. Silakan coba lagi." });
+    }
+  });
+
+  // API endpoint for admin to list leads
+  app.get("/api/admin/leads", (req, res) => {
+    try {
+      const leads = loadLeads();
+      return res.status(200).json(leads);
+    } catch (error) {
+      console.error("Failed to load admin leads:", error);
+      return res.status(500).json({ error: "Gagal memuat database leads." });
     }
   });
 
