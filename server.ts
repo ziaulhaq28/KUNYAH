@@ -12,17 +12,23 @@ const CONFIG_FILE = path.join(process.cwd(), "config.json");
 
 // Save and Load config.json on the server
 function loadConfig() {
+  const defaults = {
+    appsScriptUrl: "https://script.google.com/macros/s/AKfycbwf6FwiJTRWfwQ_fwLi29kr0grkb8d3oocIkXaUVCRJj2szLhg7soo4atWe7bz5bpnzVQ/exec"
+  };
   try {
     if (fs.existsSync(CONFIG_FILE)) {
       const data = fs.readFileSync(CONFIG_FILE, "utf-8");
-      return JSON.parse(data);
+      if (data.trim()) {
+        const parsed = JSON.parse(data);
+        if (parsed && typeof parsed === "object") {
+          return { ...defaults, ...parsed };
+        }
+      }
     }
   } catch (err) {
     console.error("Failed to read config file:", err);
   }
-  return {
-    appsScriptUrl: "https://script.google.com/macros/s/AKfycbwf6FwiJTRWfwQ_fwLi29kr0grkb8d3oocIkXaUVCRJj2szLhg7soo4atWe7bz5bpnzVQ/exec"
-  };
+  return defaults;
 }
 
 function saveConfig(config: any) {
@@ -390,43 +396,43 @@ Berikan ringkasan yang sangat ramah, memotivasi, dan optimis menggunakan Bahasa 
         return res.status(200).json({ success: true, count: 0, message: "Tidak ada data lead untuk dikirim." });
       }
 
-      console.log(`Starting Batch Sync of ${leads.length} leads to ${url}`);
-      let successCount = 0;
-      let failCount = 0;
+      console.log(`Starting Batch Sync of ${leads.length} leads in parallel to ${url}`);
 
-      // Sync individually to preserve standard Google Apps Script doPost/doGet triggers
-      for (const lead of leads) {
+      // Sync in parallel via Promise.all so it completes instantly
+      const syncPromises = leads.map(async (lead) => {
         try {
-          const response = await fetch(url, {
+          // Attempt 1: POST JSON
+          let response = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(lead),
           });
 
           if (response.ok) {
-            successCount++;
-          } else {
-            // Try urlencoded if JSON didn't work
-            const formBody = new URLSearchParams();
-            Object.entries(lead).forEach(([key, val]) => {
-              formBody.append(key, String(val));
-            });
-            const resForm = await fetch(url, {
-              method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
-              body: formBody.toString()
-            });
-            if (resForm.ok) {
-              successCount++;
-            } else {
-              failCount++;
-            }
+            return true;
           }
+
+          // Attempt 2: urlencoded Form
+          const formBody = new URLSearchParams();
+          Object.entries(lead).forEach(([key, val]) => {
+            formBody.append(key, String(val));
+          });
+          const responseForm = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formBody.toString()
+          });
+
+          return responseForm.ok;
         } catch (err) {
-          console.error("Error syncing lead row in sync-all loop:", err);
-          failCount++;
+          console.error("Error syncing individual lead in parallel sync-all loop:", err);
+          return false;
         }
-      }
+      });
+
+      const results = await Promise.all(syncPromises);
+      const successCount = results.filter(Boolean).length;
+      const failCount = results.length - successCount;
 
       return res.status(200).json({
         success: true,

@@ -77,10 +77,15 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
     try {
       const res = await fetch("/api/admin/leads");
       if (res.ok) {
-        const data = await res.json();
-        setLeads(data);
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          setLeads(data);
+        } catch (parseErr) {
+          console.error("Failed to parse leads JSON response:", text);
+        }
       } else {
-        console.error("Failed to fetch leads from server");
+        console.error("Failed to fetch leads from server status:", res.status);
       }
     } catch (err) {
       console.error("Error fetching leads:", err);
@@ -93,9 +98,14 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
     try {
       const res = await fetch("/api/admin/config");
       if (res.ok) {
-        const data = await res.json();
-        if (data.appsScriptUrl) {
-          setAppsScriptUrl(data.appsScriptUrl);
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          if (data.appsScriptUrl) {
+            setAppsScriptUrl(data.appsScriptUrl);
+          }
+        } catch (parseErr) {
+          console.error("Failed to parse config JSON response:", text);
         }
       }
     } catch (err) {
@@ -174,6 +184,12 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
         body: JSON.stringify({ appsScriptUrl: appsScriptUrl.trim() })
       });
 
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch (e) {}
+
       if (res.ok) {
         setSyncStatus({
           type: "success",
@@ -183,16 +199,15 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
           setSyncStatus({ type: "idle", message: "" });
         }, 3000);
       } else {
-        const data = await res.json();
         setSyncStatus({
           type: "error",
-          message: data.error || "Gagal menyimpan konfigurasi server."
+          message: data.error || `Gagal menyimpan konfigurasi server (${res.status}).`
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       setSyncStatus({
         type: "error",
-        message: "Terjadi kesalahan rintangan koneksi dengan server."
+        message: `Terjadi kesalahan rintangan koneksi dengan server: ${err?.message || err}`
       });
     } finally {
       setIsSavingConfig(false);
@@ -215,7 +230,14 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
       const res = await fetch("/api/admin/sync-all", {
         method: "POST"
       });
-      const data = await res.json();
+      
+      const responseText = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseErr) {
+        throw new Error(`Respon server tidak valid (${res.status} ${res.statusText}): ${responseText.substring(0, 150)}`);
+      }
 
       if (res.ok && data.success) {
         setSyncStatus({
@@ -225,13 +247,13 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
       } else {
         setSyncStatus({
           type: "error",
-          message: data.error || "Gagal memproses pengiriman data."
+          message: data.error || "Gagal memproses pengiriman data ke sheet."
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       setSyncStatus({
         type: "error",
-        message: "Gagal terhubung ke modul sinkronisasi server harian."
+        message: `Gagal terhubung ke modul sinkronisasi server harian: ${err?.message || err}`
       });
     } finally {
       setIsSyncingAll(false);

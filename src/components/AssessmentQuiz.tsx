@@ -367,7 +367,7 @@ export default function AssessmentQuiz() {
     };
 
     try {
-      const response = await fetch("/api/assessment/submit", {
+      const response = await fetch("https://script.google.com/macros/s/AKfycbwf6FwiJTRWfwQ_fwLi29kr0grkb8d3oocIkXaUVCRJj2szLhg7soo4atWe7bz5bpnzVQ/exec", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
