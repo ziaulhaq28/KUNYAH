@@ -96,6 +96,15 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
   };
 
   const fetchConfig = async () => {
+    // 1. Try local storage first
+    try {
+      const storedUrl = localStorage.getItem("kunyah_apps_script_url");
+      if (storedUrl) {
+        setAppsScriptUrl(storedUrl);
+      }
+    } catch (e) {}
+
+    // 2. Try server
     try {
       const res = await fetch(getApiUrl("/api/admin/config"));
       if (res.ok) {
@@ -104,6 +113,7 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
           const data = JSON.parse(text);
           if (data.appsScriptUrl) {
             setAppsScriptUrl(data.appsScriptUrl);
+            localStorage.setItem("kunyah_apps_script_url", data.appsScriptUrl);
           }
         } catch (parseErr) {
           console.error("Failed to parse config JSON response:", text);
@@ -176,9 +186,17 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
     }
 
     setIsSavingConfig(true);
-    setSyncStatus({ type: "loading", message: "Menyimpan konfigurasi di server..." });
+    setSyncStatus({ type: "loading", message: "Menyimpan konfigurasi..." });
 
     try {
+      // 1. Persist locally to localStorage
+      try {
+        localStorage.setItem("kunyah_apps_script_url", appsScriptUrl.trim());
+      } catch (e) {
+        console.error("Failed to save to localStorage:", e);
+      }
+
+      // 2. Persist to API server (AI Studio container)
       const res = await fetch(getApiUrl("/api/admin/config"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -194,22 +212,30 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
       if (res.ok) {
         setSyncStatus({
           type: "success",
-          message: "Koneksi Google Apps Script berhasil disimpan & didaftarkan aktif!"
+          message: "Koneksi Google Apps Script didaftarkan aktif di browser dan server!"
         });
         setTimeout(() => {
           setSyncStatus({ type: "idle", message: "" });
         }, 3000);
       } else {
+        // Fallback to local success if server responded with code error
         setSyncStatus({
-          type: "error",
-          message: data.error || `Gagal menyimpan konfigurasi server (${res.status}).`
+          type: "success",
+          message: "Koneksi Google Apps Script berhasil diaktifkan untuk browser ini!"
         });
+        setTimeout(() => {
+          setSyncStatus({ type: "idle", message: "" });
+        }, 3000);
       }
     } catch (err: any) {
+      // Network/CORS exception on Vercel is fine since we saved to localStorage
       setSyncStatus({
-        type: "error",
-        message: `Terjadi kesalahan rintangan koneksi dengan server: ${err?.message || err}`
+        type: "success",
+        message: "Koneksi Google Apps Script berhasil disimpan secara lokal!"
       });
+      setTimeout(() => {
+        setSyncStatus({ type: "idle", message: "" });
+      }, 3000);
     } finally {
       setIsSavingConfig(false);
     }

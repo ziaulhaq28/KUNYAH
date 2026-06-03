@@ -19,6 +19,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import { getApiUrl } from "../utils/api";
+import defaultConfig from "../../config.json";
 
 export interface AssessmentAnswers {
   goal: string;
@@ -361,6 +362,79 @@ export default function AssessmentQuiz() {
     }
     const formattedWA = `wa.me/${cleanedWA}`;
 
+    // 1. Prepare direct Apps Script Spreadsheet sync payload matching the 14 headers
+    const localGeneratedSummary = `Berdasarkan analisis awal, Kak ${answers.name} memiliki motivasi tinggi untuk fokus pada "${answers.goal}". Hambatan terbesar saat ini adalah "${answers.challenge}", didukung oleh pola tidur harian "${answers.sleep}" dan pola makan malam yaitu "${answers.dinner}". Klik tombol WhatsApp di bawah untuk mendiskusikan rancangan perbaikan pola mengunyah & nutrisi bersama Coach!`;
+    const timestampVal = new Date().toISOString();
+    
+    // Exact structural columns for Direct client-to-sheets posting
+    const directPayload = {
+      Timestamp: timestampVal,
+      Nama: answers.name,
+      WA: formattedWA,
+      Goal: answers.goal,
+      Challenge: answers.challenge,
+      Activity: answers.activity,
+      Sleep: answers.sleep,
+      Dinner: answers.dinner,
+      "UTM Source": tracking.utm_source || "",
+      "UTM Medium": tracking.utm_medium || "",
+      Campaign: tracking.utm_campaign || "",
+      Content: tracking.utm_content || "",
+      FBCLID: tracking.fbclid || "",
+      Status: "New",
+      "AI Summary": localGeneratedSummary,
+
+      // Extra parameters to accommodate diverse spreadsheet scripts (lowercase compatibility)
+      timestamp: timestampVal,
+      nama: answers.name,
+      name: answers.name,
+      wa: formattedWA,
+      whatsapp: formattedWA,
+      goal: answers.goal,
+      challenge: answers.challenge,
+      activity: answers.activity,
+      sleep: answers.sleep,
+      dinner: answers.dinner,
+      utm_source: tracking.utm_source || "",
+      utm_medium: tracking.utm_medium || "",
+      utm_campaign: tracking.utm_campaign || "",
+      utm_content: tracking.utm_content || "",
+      fbclid: tracking.fbclid || "",
+      status: "New",
+      aiSummary: localGeneratedSummary,
+      "ai summary": localGeneratedSummary
+    };
+
+    // Retrieve active Apps Script URL from client storage or fallback config.json
+    let appsScriptUrl = defaultConfig.appsScriptUrl;
+    try {
+      const storedUrl = localStorage.getItem("kunyah_apps_script_url");
+      if (storedUrl) {
+        appsScriptUrl = storedUrl;
+      }
+    } catch (e) {
+      console.warn("localStorage read failed:", e);
+    }
+
+    // 2. Perform direct submission from browser to the Sheets URL
+    // We use mode: "no-cors" and Content-Type: "text/plain" to bypass all CORS preflights!
+    if (appsScriptUrl) {
+      console.log("Triggering client-side direct sync to Google Sheets URL:", appsScriptUrl);
+      fetch(appsScriptUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "text/plain"
+        },
+        body: JSON.stringify(directPayload)
+      }).then(() => {
+        console.log("Client-side direct sync successfully triggered without CORS restriction!");
+      }).catch((directErr) => {
+        console.error("Client-side direct sync failed:", directErr);
+      });
+    }
+
+    // 3. Make standard server backend submission to AI Studio container
     const payload = {
       ...answers,
       whatsapp: formattedWA,
@@ -395,9 +469,8 @@ export default function AssessmentQuiz() {
         setResultsData(data.data);
       } else {
         // Safe, highly-personalized local rules-based fallback
-        const generatedSummary = `Berdasarkan analisis awal, Kak ${answers.name} memiliki motivasi tinggi untuk fokus pada "${answers.goal}". Hambatan terbesar saat ini adalah "${answers.challenge}", didukung oleh pola tidur harian "${answers.sleep}" dan pola makan malam yaitu "${answers.dinner}". Klik tombol WhatsApp di bawah untuk mendiskusikan rancangan perbaikan pola mengunyah & nutrisi bersama Coach!`;
         const fallbackData = {
-          Timestamp: new Date().toISOString(),
+          Timestamp: timestampVal,
           Nama: answers.name,
           WA: formattedWA,
           Goal: answers.goal,
@@ -411,7 +484,7 @@ export default function AssessmentQuiz() {
           Content: tracking.utm_content || "",
           FBCLID: tracking.fbclid || "",
           Status: "New",
-          "AI Summary": generatedSummary
+          "AI Summary": localGeneratedSummary
         };
         setResultsData(fallbackData);
       }
