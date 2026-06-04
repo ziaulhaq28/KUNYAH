@@ -4,6 +4,7 @@ import Footer from "./components/Footer";
 import AssessmentQuiz from "./components/AssessmentQuiz";
 import OrderNotification from "./components/OrderNotification";
 import AdminPortal from "./components/AdminPortal";
+import { initScrollDepthTracker } from "./utils/tracker";
 import { 
   Sparkles, 
   ChevronRight, 
@@ -25,13 +26,16 @@ export default function App() {
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
 
-  // Auto detect if user is loading the app with ?admin=true
+  // Auto detect if user is loading the app with ?admin=true & Init Scroll/PageView Tracker
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("admin") === "true") {
         setIsAdminOpen(true);
       }
+      
+      // Initialize scroll tracker and initial page view event log
+      initScrollDepthTracker();
     }
   }, []);
 

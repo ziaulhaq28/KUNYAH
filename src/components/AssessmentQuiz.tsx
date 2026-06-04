@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { getApiUrl } from "../utils/api";
 import defaultConfig from "../../config.json";
+import { trackAnalyticsEvent } from "../utils/tracker";
 
 export interface AssessmentAnswers {
   goal: string;
@@ -222,6 +223,10 @@ export default function AssessmentQuiz() {
   // Safe tracking helper for standard Meta Pixel structures
   const trackPixelEvent = (eventName: string, data?: any) => {
     console.log(`[Meta Pixel Event]: ${eventName}`, data || "");
+    
+    // Also log event cleanly to our custom server database
+    trackAnalyticsEvent(eventName, data);
+
     if (typeof window !== "undefined") {
       const fbq = (window as any).fbq;
       if (typeof fbq === "function") {
@@ -788,7 +793,10 @@ Saya ingin mendapatkan arahan awal dari tim Kunyah.`;
                 href={getWhatsAppLink()}
                 target="_blank"
                 rel="noreferrer"
-                onClick={() => setWaClicked(true)}
+                onClick={() => {
+                  setWaClicked(true);
+                  trackPixelEvent("WhatsAppClick");
+                }}
                 animate={{ scale: [1, 1.02, 1] }}
                 transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
                 className="inline-flex items-center justify-center gap-2.5 w-full bg-[#E8B100] hover:bg-[#D5A200] text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 shadow-xl shadow-yellow-500/10 cursor-pointer group hover:scale-[1.04]"

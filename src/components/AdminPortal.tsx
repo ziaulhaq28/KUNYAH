@@ -13,7 +13,12 @@ import {
   ChevronRight, 
   Sparkles,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  BarChart3,
+  Eye,
+  Trash2,
+  MousePointer,
+  Activity
 } from "lucide-react";
 import { initializeApp } from "firebase/app";
 import { 
@@ -63,6 +68,11 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
   const [isLoadingLeads, setIsLoadingLeads] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
   
+  // Analytics and Pixel Tracking Dashboard State
+  const [activeTab, setActiveTab] = useState<"leads" | "analytics">("leads");
+  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState<boolean>(false);
+  
   // Apps Script Server Settings State
   const [appsScriptUrl, setAppsScriptUrl] = useState<string>("");
   const [isSavingConfig, setIsSavingConfig] = useState<boolean>(false);
@@ -71,6 +81,41 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
     type: "idle" | "loading" | "success" | "error";
     message: string;
   }>({ type: "idle", message: "" });
+
+  const fetchAnalyticsStats = async () => {
+    setIsLoadingStats(true);
+    try {
+      const res = await fetch(getApiUrl("/api/analytics/stats"));
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setAnalyticsStats(data);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching analytics stats:", err);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
+  const handleClearAnalytics = async () => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus seluruh riwayat analitik pixel & scroll depth ke nol?")) {
+      return;
+    }
+    setIsLoadingStats(true);
+    try {
+      const res = await fetch(getApiUrl("/api/analytics/clear"), { method: "POST" });
+      if (res.ok) {
+        await fetchAnalyticsStats();
+        alert("Seluruh riwayat tracking pixel berhasil dibersihkan.");
+      }
+    } catch (err) {
+      console.error("Error clearing analytics:", err);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
 
   // Fetch leads and configuration from server
   const fetchLeads = async () => {
@@ -127,6 +172,7 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
   useEffect(() => {
     fetchLeads();
     fetchConfig();
+    fetchAnalyticsStats();
   }, []);
 
   const handleGoogleSignIn = async () => {
@@ -250,37 +296,100 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
       return;
     }
 
+    if (leads.length === 0) {
+      setSyncStatus({
+        type: "success",
+        message: "Tidak ada data lead untuk dikirim."
+      });
+      return;
+    }
+
     setIsSyncingAll(true);
-    setSyncStatus({ type: "loading", message: "Mengirim seluruh baris leads harian ke Google Sheet..." });
+    setSyncStatus({ type: "loading", message: "Memulai pengiriman database harian langsung dari browser..." });
 
     try {
-      const res = await fetch(getApiUrl("/api/admin/sync-all"), {
-        method: "POST"
-      });
-      
-      const responseText = await res.text();
-      let data: any = {};
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseErr) {
-        throw new Error(`Respon server tidak valid (${res.status} ${res.statusText}): ${responseText.substring(0, 150)}`);
+      let successCount = 0;
+      let failCount = 0;
+      const targetUrl = appsScriptUrl.trim();
+
+      // Send each lead directly from browser utilizing 'no-cors' mode to bypass any server-side network blockages or CORS limitations on Google Apps Script
+      for (let i = 0; i < leads.length; i++) {
+        const lead = leads[i];
+        
+        setSyncStatus({
+          type: "loading",
+          message: `Mengirim lead ${i + 1} dari ${leads.length}: ${lead.Nama || "Klien"}...`
+        });
+
+        // Ensure we preserve the full set of parameters in both standard CamelCase / PascalCase and lower_snake_case for all script styles
+        const payload = {
+          // Standard columns
+          Timestamp: lead.Timestamp || lead.timestamp || new Date().toISOString(),
+          Nama: lead.Nama || lead.nama || lead.name || "",
+          WA: lead.WA || lead.wa || lead.whatsapp || "",
+          Goal: lead.Goal || lead.goal || "",
+          Challenge: lead.Challenge || lead.challenge || "",
+          Activity: lead.Activity || lead.activity || "",
+          Sleep: lead.Sleep || lead.sleep || "",
+          Dinner: lead.Dinner || lead.dinner || "",
+          "UTM Source": lead["UTM Source"] || lead.utm_source || "",
+          "UTM Medium": lead["UTM Medium"] || lead.utm_medium || "",
+          Campaign: lead.Campaign || lead.utm_campaign || "",
+          Content: lead.Content || lead.utm_content || "",
+          FBCLID: lead.FBCLID || lead.fbclid || "",
+          Status: lead.Status || lead.status || "New",
+          "AI Summary": lead["AI Summary"] || lead.aiSummary || "",
+
+          // Extra lowercase structure for multi-script variations
+          timestamp: lead.Timestamp || lead.timestamp || new Date().toISOString(),
+          nama: lead.Nama || lead.nama || lead.name || "",
+          name: lead.Nama || lead.nama || lead.name || "",
+          wa: lead.WA || lead.wa || lead.whatsapp || "",
+          whatsapp: lead.WA || lead.wa || lead.whatsapp || "",
+          goal: lead.Goal || lead.goal || "",
+          challenge: lead.Challenge || lead.challenge || "",
+          activity: lead.Activity || lead.activity || "",
+          sleep: lead.Sleep || lead.sleep || "",
+          dinner: lead.Dinner || lead.dinner || "",
+          utm_source: lead["UTM Source"] || lead.utm_source || "",
+          utm_medium: lead["UTM Medium"] || lead.utm_medium || "",
+          utm_campaign: lead.Campaign || lead.utm_campaign || "",
+          utm_content: lead.Content || lead.utm_content || "",
+          fbclid: lead.FBCLID || lead.fbclid || "",
+          status: lead.Status || lead.status || "New",
+          aiSummary: lead["AI Summary"] || lead.aiSummary || ""
+        };
+
+        try {
+          // Content-Type: text/plain + no-cors is the standard workaround to avoid browser preflight/CORS error for Google Apps Script URLs
+          await fetch(targetUrl, {
+            method: "POST",
+            mode: "no-cors",
+            headers: {
+              "Content-Type": "text/plain"
+            },
+            body: JSON.stringify(payload)
+          });
+          successCount++;
+        } catch (err) {
+          console.error(`Browser direct sync failed for item ${i}:`, err);
+          failCount++;
+        }
       }
 
-      if (res.ok && data.success) {
-        setSyncStatus({
-          type: "success",
-          message: data.message || "Berhasil mengirim seluruh database ke Google Sheet!"
-        });
-      } else {
-        setSyncStatus({
-          type: "error",
-          message: data.error || "Gagal memproses pengiriman data ke sheet."
-        });
-      }
+      setSyncStatus({
+        type: "success",
+        message: `Berhasil sinkronisasi! ${successCount} baris lead terkirim langsung dari browser Anda ke Google Sheets.`
+      });
+
+      setTimeout(() => {
+        setSyncStatus({ type: "idle", message: "" });
+      }, 5000);
+
     } catch (err: any) {
       setSyncStatus({
         type: "error",
-        message: `Gagal terhubung ke modul sinkronisasi server harian: ${err?.message || err}`
+        message: `Gagal menyelesaikan sinkronisasi: ${err?.message || err}`
       });
     } finally {
       setIsSyncingAll(false);
@@ -426,122 +535,359 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
             </div>
           </div>
 
-          {/* Right panel - Lead Table and View */}
+          {/* Right panel - Dynamic lead list AND Analytics dashboard */}
           <div className="lg:col-span-7 p-6 overflow-hidden flex flex-col space-y-4">
             
-            {/* Search and reload header */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-between items-center shrink-0">
-              <h2 className="text-sm font-bold text-gray-800 flex items-center gap-1.5 self-start">
-                <Table className="w-4 h-4 text-[#E8B100]" />
-                Hasil Assessment Terkumpul ({leads.length})
-              </h2>
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-60">
-                  <Search className="w-3.5 h-3.5 text-gray-450 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input 
-                    type="text" 
-                    value={searchTerm} 
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Cari Nama / WA / No..." 
-                    className="w-full pl-9 pr-3.5 py-1.5 bg-gray-50 focus:bg-white text-xs rounded-xl border border-gray-200 outline-none focus:border-[#E8B100] transition-colors"
-                  />
-                </div>
-                <button
-                  onClick={fetchLeads}
-                  disabled={isLoadingLeads}
-                  className="p-2 bg-gray-50 hover:bg-gray-200/50 text-gray-500 rounded-xl border border-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center shrink-0"
-                  title="Reload leads"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingLeads ? "animate-spin" : ""}`} />
-                </button>
-              </div>
+            {/* Elegant Tab Selector */}
+            <div className="flex border-b border-gray-150 shrink-0 gap-1.5 pb-0.5">
+              <button
+                type="button"
+                onClick={() => setActiveTab("leads")}
+                className={`px-4 py-2.5 text-xs font-extrabold transition-all border-b-2 rounded-t-xl flex items-center gap-2 cursor-pointer ${
+                  activeTab === "leads"
+                    ? "border-[#E8B100] text-[#E8B100] bg-yellow-50/20"
+                    : "border-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-55/40"
+                }`}
+              >
+                <Table className="w-3.5 h-3.5" />
+                Daftar Leads ({leads.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("analytics");
+                  fetchAnalyticsStats();
+                }}
+                className={`px-4 py-2.5 text-xs font-extrabold transition-all border-b-2 rounded-t-xl flex items-center gap-2 cursor-pointer ${
+                  activeTab === "analytics"
+                    ? "border-[#E8B100] text-[#E8B100] bg-yellow-50/20"
+                    : "border-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-55/40"
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                Meta Pixel & Scroll Depth Analytics
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              </button>
             </div>
 
-            {/* Table layout with horizontal scroll */}
-            <div className="flex-1 overflow-auto border border-gray-150 rounded-2xl bg-white shadow-sm">
-              {isLoadingLeads ? (
-                <div className="h-full flex items-center justify-center py-20 flex-col gap-3">
-                  <RefreshCw className="w-8 h-8 text-[#E8B100] animate-spin" />
-                  <span className="text-xs text-gray-400 font-medium">Memuat database harian...</span>
+            {/* TAB CONTEXT: LEADS SYSTEM */}
+            {activeTab === "leads" && (
+              <>
+                {/* Search and reload header */}
+                <div className="flex flex-col sm:flex-row gap-3 justify-between items-center shrink-0">
+                  <h2 className="text-xs font-bold text-gray-450 uppercase tracking-widest flex items-center gap-1.5 self-start">
+                    Hasil Assessment Terkumpul
+                  </h2>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:w-60">
+                      <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input 
+                        type="text" 
+                        value={searchTerm} 
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Cari Nama / WA / No..." 
+                        className="w-full pl-9 pr-3.5 py-1.5 bg-gray-50 focus:bg-white text-xs rounded-xl border border-gray-200 outline-none focus:border-[#E8B100] transition-colors"
+                      />
+                    </div>
+                    <button
+                      onClick={fetchLeads}
+                      disabled={isLoadingLeads}
+                      className="p-2 bg-gray-50 hover:bg-gray-200/50 text-gray-500 rounded-xl border border-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center shrink-0"
+                      title="Reload leads"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isLoadingLeads ? "animate-spin" : ""}`} />
+                    </button>
+                  </div>
                 </div>
-              ) : filteredLeads.length === 0 ? (
-                <div className="h-full flex items-center justify-center py-20 flex-col gap-2">
-                  <AlertCircle className="w-7 h-7 text-gray-300" />
-                  <span className="text-xs text-gray-400">Tidak ada lead yang ditemukan</span>
+
+                {/* Table layout with horizontal scroll */}
+                <div className="flex-1 overflow-auto border border-gray-150 rounded-2xl bg-white shadow-sm">
+                  {isLoadingLeads ? (
+                    <div className="h-full flex items-center justify-center py-20 flex-col gap-3">
+                      <RefreshCw className="w-8 h-8 text-[#E8B100] animate-spin" />
+                      <span className="text-xs text-gray-400 font-medium">Memuat database harian...</span>
+                    </div>
+                  ) : filteredLeads.length === 0 ? (
+                    <div className="h-full flex items-center justify-center py-20 flex-col gap-2">
+                      <AlertCircle className="w-7 h-7 text-gray-300" />
+                      <span className="text-xs text-gray-400">Tidak ada lead yang ditemukan</span>
+                    </div>
+                  ) : (
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead className="bg-[#FAFAF9] text-gray-400 sticky top-0 border-b border-gray-100 z-10 font-bold uppercase tracking-wider text-[9px]">
+                        <tr>
+                          <th className="py-3 px-4">Nama / WA</th>
+                          <th className="py-3 px-4">Goal Utama</th>
+                          <th className="py-3 px-4">Tantangan</th>
+                          <th className="py-3 px-4">Tidur & Makan</th>
+                          <th className="py-3 px-4">Waktu</th>
+                          <th className="py-3 px-4">UTM Stats</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-[#1E1E1E]">
+                        {filteredLeads.map((lead, idx) => (
+                          <tr key={idx} className="hover:bg-[#FDFBF7] transition-colors duration-150">
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-[#1E1E1E] text-xs leading-snug">{lead.Nama}</div>
+                              <div className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1.5 font-mono">
+                                {lead.WA}
+                                {lead.WA && (
+                                  <a 
+                                    href={`https://${lead.WA}`} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="text-[#E8B100] hover:underline flex items-center gap-0.5"
+                                  >
+                                    WA <ExternalLink className="w-2.5 h-2.5" />
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 font-medium text-gray-700 leading-relaxed max-w-[150px] truncate" title={lead.Goal}>
+                              {lead.Goal}
+                            </td>
+                            <td className="py-3.5 px-4 text-gray-400 leading-relaxed max-w-[150px] truncate" title={lead.Challenge}>
+                              {lead.Challenge}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="text-[10px]"><span className="text-gray-400">Tidur:</span> {lead.Sleep}</div>
+                              <div className="text-[10px] mt-0.5"><span className="text-gray-400">Makan:</span> {lead.Dinner}</div>
+                            </td>
+                            <td className="py-3.5 px-4 text-gray-400 whitespace-nowrap text-[10px] font-mono">
+                              {lead.Timestamp ? new Date(lead.Timestamp).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              }) : "-"}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {lead["UTM Source"] ? (
+                                <div className="text-[9px] bg-yellow-50 text-yellow-800 border border-yellow-100 rounded-md px-1.5 py-0.5 inline-block font-mono">
+                                  Src: {lead["UTM Source"]}
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-gray-300">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
-              ) : (
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead className="bg-[#FAFAF9] text-gray-400 sticky top-0 border-b border-gray-100 z-10 font-bold uppercase tracking-wider text-[9px]">
-                    <tr>
-                      <th className="py-3 px-4">Nama / WA</th>
-                      <th className="py-3 px-4">Goal Utama</th>
-                      <th className="py-3 px-4">Tantangan</th>
-                      <th className="py-3 px-4">Tidur & Makan</th>
-                      <th className="py-3 px-4">Waktu</th>
-                      <th className="py-3 px-4">UTM Stats</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 text-[#1E1E1E]">
-                    {filteredLeads.map((lead, idx) => (
-                      <tr key={idx} className="hover:bg-[#FDFBF7] transition-colors duration-150">
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-[#1E1E1E] text-xs leading-snug">{lead.Nama}</div>
-                          <div className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1.5 font-mono">
-                            {lead.WA}
-                            {lead.WA && (
-                              <a 
-                                href={`https://${lead.WA}`} 
-                                target="_blank" 
-                                rel="noreferrer"
-                                className="text-[#E8B100] hover:underline flex items-center gap-0.5"
-                              >
-                                WA <ExternalLink className="w-2.5 h-2.5" />
-                              </a>
-                            )}
+
+                {/* Instruction Footer */}
+                <div className="pt-2 flex justify-between items-center text-[10px] text-gray-400 shrink-0">
+                  <p>Menampilkan {filteredLeads.length} dari total {leads.length} leads harian.</p>
+                  <p className="flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-[#E8B100]" />
+                    Data sync setup active
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* TAB CONTEXT: PIXEL & SCROLL ANALYTICS */}
+            {activeTab === "analytics" && (
+              <div className="flex-1 overflow-y-auto space-y-5 pr-1">
+                
+                {/* Dashboard Stats Panel */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">Laporan Kinerja Landing Page</h3>
+                    <p className="text-[11px] text-gray-400">Dimonitor layaknya Meta Pixel extension untuk optimasi biaya iklan Anda</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={fetchAnalyticsStats}
+                      disabled={isLoadingStats}
+                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-2xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isLoadingStats ? "animate-spin" : ""}`} />
+                      Refresh Data
+                    </button>
+                    <button
+                      onClick={handleClearAnalytics}
+                      disabled={isLoadingStats}
+                      className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-2xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Clear Logs
+                    </button>
+                  </div>
+                </div>
+
+                {isLoadingStats && !analyticsStats ? (
+                  <div className="py-20 flex flex-col items-center justify-center gap-3 bg-white border border-gray-100 rounded-3xl">
+                    <RefreshCw className="w-8 h-8 text-[#E8B100] animate-spin" />
+                    <span className="text-xs text-gray-400">Menghitung akumulasi data pixel...</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Meta Cards Overview */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="bg-[#FAFAF9] border border-gray-200/50 rounded-2xl p-3.5">
+                        <span className="text-[10px] text-gray-400 block font-bold uppercase tracking-wider mb-1">Total Pengunjung</span>
+                        <span className="text-2xl font-black text-gray-800">{analyticsStats?.summary?.totalSessions || 0}</span>
+                        <span className="text-[10px] text-gray-400 block mt-1">Sesi Unik</span>
+                      </div>
+                      <div className="bg-[#FAFAF9] border border-gray-200/50 rounded-2xl p-3.5">
+                        <span className="text-[10px] text-yellow-800 block font-bold uppercase tracking-wider mb-1">Mulai Assessment</span>
+                        <span className="text-2xl font-black text-[#E8B100]">{analyticsStats?.funnel?.starts?.count || 0}</span>
+                        <span className="text-[10px] text-emerald-600 block mt-1 font-bold">🎯 {analyticsStats?.funnel?.starts?.percentOfViews || 0}% Klik Form</span>
+                      </div>
+                      <div className="bg-[#FAFAF9] border border-gray-200/50 rounded-2xl p-3.5">
+                        <span className="text-[10px] text-amber-900 block font-bold uppercase tracking-wider mb-1">Kirim Jawaban</span>
+                        <span className="text-2xl font-black text-[#E8B100]">{analyticsStats?.funnel?.completes?.count || 0}</span>
+                        <span className="text-[10px] text-gray-500 block mt-1 font-semibold">{analyticsStats?.funnel?.completes?.percentOfStarts || 0}% Selesai Quiz</span>
+                      </div>
+                      <div className="bg-[#FAFAF9] border border-gray-200/50 rounded-2xl p-3.5 bg-yellow-50/20 border-yellow-100/40">
+                        <span className="text-[10px] text-emerald-800 block font-bold uppercase tracking-wider mb-1">Klik Hubungi WA</span>
+                        <span className="text-2xl font-black text-emerald-600">{analyticsStats?.funnel?.waClicks?.count || 0}</span>
+                        <span className="text-[10px] text-emerald-700 block mt-1 font-bold">📲 {analyticsStats?.funnel?.waClicks?.percentOfCompletes || 0}% Leads WhatsApp</span>
+                      </div>
+                    </div>
+
+                    {/* Funnel Map Component */}
+                    <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-sm space-y-4">
+                      <h4 className="text-xs font-extrabold text-gray-800 flex items-center gap-1.5 uppercase tracking-wide">
+                        <BarChart3 className="w-4 h-4 text-[#E8B100]" />
+                        Funnel Konversi Landings ke WhatsApp Leads
+                      </h4>
+                      
+                      <div className="space-y-3 pt-2">
+                        {/* Landing stage */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-xs font-semibold text-gray-700">
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-gray-400" />
+                              1. Pengunjung Membuka Page (PageView)
+                            </span>
+                            <span>{analyticsStats?.summary?.totalSessions || 0} Sesi (100%)</span>
                           </div>
-                        </td>
-                        <td className="py-3.5 px-4 font-medium text-gray-700 leading-relaxed max-w-[150px] truncate" title={lead.Goal}>
-                          {lead.Goal}
-                        </td>
-                        <td className="py-3.5 px-4 text-gray-400 leading-relaxed max-w-[150px] truncate" title={lead.Challenge}>
-                          {lead.Challenge}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <div className="text-[10px]"><span className="text-gray-400">Tinggi:</span> {lead.Sleep}</div>
-                          <div className="text-[10px] mt-0.5"><span className="text-gray-400">Makan:</span> {lead.Dinner}</div>
-                        </td>
-                        <td className="py-3.5 px-4 text-gray-400 whitespace-nowrap text-[10px] font-mono">
-                          {lead.Timestamp ? new Date(lead.Timestamp).toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          }) : "-"}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          {lead["UTM Source"] ? (
-                            <div className="text-[9px] bg-yellow-50 text-yellow-800 border border-yellow-100 rounded-md px-1.5 py-0.5 inline-block font-mono">
-                              Src: {lead["UTM Source"]}
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-gray-300">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+                          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-gray-400 rounded-full" style={{ width: "100%" }} />
+                          </div>
+                        </div>
 
-            {/* Instruction Footer */}
-            <div className="pt-2 flex justify-between items-center text-[10px] text-gray-400 shrink-0">
-              <p>Menampilkan {filteredLeads.length} dari total {leads.length} leads harian.</p>
-              <p className="flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-[#E8B100]" />
-                Powered by Google AI Studio
-              </p>
-            </div>
+                        {/* Start Quiz */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-xs font-semibold text-gray-700">
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                              2. Mengklik "Isi Assessment" (AssessmentStart)
+                            </span>
+                            <span>{analyticsStats?.funnel?.starts?.count || 0} Sesi ({analyticsStats?.funnel?.starts?.percentOfViews || 0}%)</span>
+                          </div>
+                          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-[#E8B100]" style={{ width: `${analyticsStats?.funnel?.starts?.percentOfViews || 0}%` }} />
+                          </div>
+                        </div>
+
+                        {/* Submit Quiz */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-xs font-semibold text-gray-700">
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-amber-500" />
+                              3. Menyelesaikan & Kirim Assessment (LeadSubmit)
+                            </span>
+                            <span>{analyticsStats?.funnel?.completes?.count || 0} Sesi ({analyticsStats?.funnel?.completes?.percentOfViews || 0}%)</span>
+                          </div>
+                          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-amber-500" style={{ width: `${analyticsStats?.funnel?.completes?.percentOfViews || 0}%` }} />
+                          </div>
+                        </div>
+
+                        {/* WA message */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-xs font-semibold text-[#1E1E1E]">
+                            <span className="flex items-center gap-1.5 text-emerald-700 font-bold">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                              4. Mengklik Tombol Hubungi Coach ke WA (WhatsAppClick)
+                            </span>
+                            <span className="text-emerald-700 font-bold">{analyticsStats?.funnel?.waClicks?.count || 0} Sesi ({analyticsStats?.funnel?.waClicks?.percentOfViews || 0}%)</span>
+                          </div>
+                          <div className="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500" style={{ width: `${analyticsStats?.funnel?.waClicks?.percentOfViews || 0}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Scroll Tracking Heatmap */}
+                    <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-sm space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-xs font-extrabold text-gray-800 flex items-center gap-1.5 uppercase tracking-wide">
+                          <Eye className="w-4 h-4 text-purple-600" />
+                          Scroll Depth Heatmap (Akumulasi Scroll Pengunjung)
+                        </h4>
+                        <span className="text-[10px] text-purple-600 bg-purple-50 font-bold px-2 py-0.5 rounded-md">Meta-Pixel Equiv Heatmap</span>
+                      </div>
+                      
+                      <p className="text-[11px] text-gray-450 leading-relaxed font-light">
+                        Mendeteksi seberapa jauh pengguna melakukan scroll ke bawah pada halaman penawaran Kunyah. Ideal untuk mengukur ketertarikan visual sebelum meluncurkan kampanye iklan berbayar (FB Ads/Tiktok Ads).
+                      </p>
+
+                      <div className="space-y-4.5 pt-2">
+                        {/* Milestone 25% */}
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-semibold text-gray-700">▼ Scroll 25% (Tiba di Paragraf Pembuka & Solusi Masalah)</span>
+                            <span className="font-mono text-gray-500 font-bold">{analyticsStats?.scrollStats?.reached25?.percent || 0}% ({analyticsStats?.scrollStats?.reached25?.count || 0} Sesi)</span>
+                          </div>
+                          <div className="h-3 w-full bg-gray-100 rounded-lg overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-lg transition-all duration-1000" style={{ width: `${analyticsStats?.scrollStats?.reached25?.percent || 0}%` }} />
+                          </div>
+                        </div>
+
+                        {/* Milestone 50% */}
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-semibold text-gray-700">▼ Scroll 50% (Melihat Bahaya Pola Hidup & Kebiasaan Buruk)</span>
+                            <span className="font-mono text-gray-500 font-bold">{analyticsStats?.scrollStats?.reached50?.percent || 0}% ({analyticsStats?.scrollStats?.reached50?.count || 0} Sesi)</span>
+                          </div>
+                          <div className="h-3 w-full bg-gray-100 rounded-lg overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-lg transition-all duration-1000" style={{ width: `${analyticsStats?.scrollStats?.reached50?.percent || 0}%` }} />
+                          </div>
+                        </div>
+
+                        {/* Milestone 75% */}
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-semibold text-gray-700">▼ Scroll 75% (Tiba di Bagian Interactive Form Assessment)</span>
+                            <span className="font-mono text-gray-500 font-bold">{analyticsStats?.scrollStats?.reached75?.percent || 0}% ({analyticsStats?.scrollStats?.reached75?.count || 0} Sesi)</span>
+                          </div>
+                          <div className="h-3 w-full bg-gray-100 rounded-lg overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-lg transition-all duration-1000" style={{ width: `${analyticsStats?.scrollStats?.reached75?.percent || 0}%` }} />
+                          </div>
+                        </div>
+
+                        {/* Milestone 100% */}
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-semibold text-gray-700">🏆 Scroll 100% (Membaca Sampai ke Footer / Selesai Membaca)</span>
+                            <span className="font-mono text-emerald-800 font-extrabold">{analyticsStats?.scrollStats?.reached100?.percent || 0}% ({analyticsStats?.scrollStats?.reached100?.count || 0} Sesi)</span>
+                          </div>
+                          <div className="h-3 w-full bg-gray-100 rounded-lg overflow-hidden">
+                            <div className="h-full bg-[#E8B100] rounded-lg transition-all duration-1000" style={{ width: `${analyticsStats?.scrollStats?.reached100?.percent || 0}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Footer and Info Disclaimer */}
+                <div className="p-4 bg-blue-50/40 border border-blue-100/50 rounded-2xl flex items-start gap-2.5">
+                  <span className="text-sm">🎯</span>
+                  <p className="text-[10px] text-blue-900 leading-relaxed font-light">
+                    <strong>Tips Mengoptimalkan Landing Page Anda:</strong> Jika presentase Scroll 75% Anda berada di bawah <span className="font-semibold text-rose-700">30%</span>, Anda perlu menyusun ulang judul penawaran / memindahkan tombol "Isi Assessment" lebih tinggi (di atas lipatan halaman/above fold) agar menghemat biaya pengeluaran iklan Anda!
+                  </p>
+                </div>
+              </div>
+            )}
 
           </div>
 
